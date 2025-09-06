@@ -8,9 +8,8 @@ describe('KsTextFieldComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [KsTextFieldComponent]
-    })
-    .compileComponents();
+      imports: [KsTextFieldComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(KsTextFieldComponent);
     component = fixture.componentInstance;

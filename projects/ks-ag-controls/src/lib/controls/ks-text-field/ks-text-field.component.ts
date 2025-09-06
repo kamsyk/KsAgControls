@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
   imports: [MatInputModule, FormsModule],
   templateUrl: './ks-text-field.component.html',
   styleUrl: './ks-text-field.component.css',
-  standalone: true
+  standalone: true,
 })
 export class KsTextFieldComponent {
   username = '';

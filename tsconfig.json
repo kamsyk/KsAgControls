@@ -8,9 +8,7 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "paths": {
-      "ks-ag-controls": [
-        "./dist/ks-ag-controls"
-      ]
+      "ks-ag-controls": ["./dist/ks-ag-controls"]
     },
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
