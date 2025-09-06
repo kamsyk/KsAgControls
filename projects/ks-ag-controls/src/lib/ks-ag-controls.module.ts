@@ -6,7 +6,9 @@ import { FormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [],
-  imports: [CommonModule, MatFormFieldModule, MatInputModule, FormsModule],
-  exports: [MatFormFieldModule, MatInputModule, FormsModule],
+  imports: [
+    CommonModule, MatFormFieldModule, MatInputModule, FormsModule
+  ],
+  exports: [MatFormFieldModule, MatInputModule, FormsModule]
 })
-export class SharedComponentsModule {}
+export class KsAgControlsModule { }

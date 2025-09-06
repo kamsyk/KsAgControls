@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
-import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
-  selector: 'sc-ks-text-field',
+  selector: 'lib-ks-text-field',
   imports: [MatInputModule, FormsModule],
   templateUrl: './ks-text-field.component.html',
-  styleUrl: './ks-text-field.component.css',
+  styleUrl: './ks-text-field.component.css'
 })
 export class KsTextFieldComponent {
   username = '';
