@@ -12,7 +12,7 @@ import { MatInputModule } from '@angular/material/input';
   selector: 'lib-ks-sign-up',
   imports: [MatInputModule, MatFormFieldModule, ReactiveFormsModule],
   templateUrl: './ks-sign-up.component.html',
-  styleUrl: './ks-sign-up.component.css',
+  styleUrl: './ks-sign-up.component.scss',
 })
 export class KsSignUpComponent {
   signUpForm: FormGroup;
