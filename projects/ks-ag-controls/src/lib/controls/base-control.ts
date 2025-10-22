@@ -1,2 +1,1 @@
-export class BaseControl {
-}
+export class BaseControl {}

@@ -1,15 +1,19 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, of, take, tap } from 'rxjs';
+import { Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
   private platformId = inject(PLATFORM_ID);
   private readonly tokenKey = 'auth_token';
+  private router = inject(Router, { optional: true });
 
-  private get isBrowser() { return isPlatformBrowser(this.platformId); }
+  private get isBrowser() {
+    return isPlatformBrowser(this.platformId);
+  }
 
   isAuthenticated(): boolean {
     return !!this.getToken();
@@ -26,20 +30,41 @@ export class AuthService {
 
   logout(): void {
     if (!this.isBrowser) return;
-    try { localStorage.removeItem(this.tokenKey); } catch {}
+    try {
+      localStorage.removeItem(this.tokenKey);
+    } catch {
+      void 0;
+    }
   }
 
-  login(email: string, password: string) {
-    return this.http.post<AuthResponse>('https://localhost:7107/api/Auth/login', { email, password }).pipe(
-      map(res => {
+  login(
+    email: string,
+    password: string,
+    loginUrl: string,
+    redirectUrl: string,
+  ) {
+    return this.http.post<AuthResponse>(loginUrl, { email, password }).pipe(
+      take(1),
+      tap((res) => {
         if (this.isBrowser) {
           const token = res.accessToken ?? res.AccessToken ?? '';
           localStorage.setItem(this.tokenKey, token);
         }
-        return true;
+        this.redirect(redirectUrl);
       }),
-      catchError(() => of(false))
+      map(() => true),
+      catchError(() => of(false)),
     );
+  }
+
+  private redirect(url?: string) {
+    if (!this.isBrowser || !url) return;
+    const isAbsolute = /^https?:\/\//i.test(url);
+    if (!isAbsolute && this.router) {
+      void this.router.navigateByUrl(url);
+    } else {
+      window.location.assign(url);
+    }
   }
 }
 
@@ -48,4 +73,4 @@ interface AuthResponse {
   AccessToken?: string;
   expiresAt?: string | Date;
   tokenType?: string;
-};
+}

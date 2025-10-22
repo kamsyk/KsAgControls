@@ -8,9 +8,8 @@ describe('KsLoginComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [KsLoginComponent]
-    })
-    .compileComponents();
+      imports: [KsLoginComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(KsLoginComponent);
     component = fixture.componentInstance;
