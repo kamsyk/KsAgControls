@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input } from '@angular/core';
+import { Component, DestroyRef, inject, input, output } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -18,6 +18,8 @@ export class KsLoginComponent {
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
+
+  loginSuccess = output<{ email: string }>();
 
   loading = false;
   error = '';
@@ -42,7 +44,9 @@ export class KsLoginComponent {
         next: (ok) => {
           this.loading = false;
           if (ok) {
-            // success
+            this.loginSuccess.emit({
+              email
+            });
           } else {
             this.error = 'Invalid credentials';
           }

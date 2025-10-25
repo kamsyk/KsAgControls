@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of, take, tap } from 'rxjs';
 import { Router } from '@angular/router';
-import { RESPONSE } from '@angular/ssr';
+import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -11,8 +11,7 @@ export class AuthService {
   private platformId = inject(PLATFORM_ID);
   private readonly tokenKey = 'auth_token';
   private router = inject(Router, { optional: true });
-   private response = inject(RESPONSE, { optional: true }); // SSR response
-
+  private cookieService = inject(SsrCookieService);
 
   private get isBrowser() {
     return isPlatformBrowser(this.platformId);
@@ -23,7 +22,10 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    if (!this.isBrowser) return null;
+    if (!this.isBrowser) {
+      return this.cookieService.get('auth_token');
+      //return null;
+    }
     try {
       return localStorage.getItem(this.tokenKey);
     } catch {
@@ -52,6 +54,24 @@ export class AuthService {
         if (this.isBrowser) {
           const token = res.accessToken ?? res.AccessToken ?? '';
           localStorage.setItem(this.tokenKey, token);
+
+          this.cookieService.set('auth_token', token, {
+            expires: 7, // expires in 7 days
+            //path: '/',
+            //domain: undefined,
+            //secure: true,
+            //sameSite: 'Strict'
+          });
+
+          // this.cookieService.set(
+          //   'auth_token',
+          //   token,
+          //   7, // expires in 7 days
+          //   '/', // path
+          //   undefined, // domain (undefined = current domain)
+          //   true, // secure (HTTPS only)
+          //   'Strict' // SameSite
+          // );
         }
         this.redirect(redirectUrl);
       }),
@@ -60,23 +80,23 @@ export class AuthService {
     );
   }
 
-  private setServerCookie(name: string, value: string, days = 7): void {
-    if (!this.response) return;
+  // private setServerCookie(name: string, value: string, days = 7): void {
+  //   if (!this.response) return;
 
-    const expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  //   const expires = new Date();
+  //   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
 
-    const cookieOptions = [
-      `${name}=${encodeURIComponent(value)}`,
-      `expires=${expires.toUTCString()}`,
-      'path=/',
-      'SameSite=Strict',
-      'Secure',
-      'HttpOnly' // Server-side cookies can be HttpOnly for security
-    ];
+  //   const cookieOptions = [
+  //     `${name}=${encodeURIComponent(value)}`,
+  //     `expires=${expires.toUTCString()}`,
+  //     'path=/',
+  //     'SameSite=Strict',
+  //     'Secure',
+  //     'HttpOnly' // Server-side cookies can be HttpOnly for security
+  //   ];
 
-    this.response.setHeader('Set-Cookie', cookieOptions.join('; '));
-  }
+  //   this.response.setHeader('Set-Cookie', cookieOptions.join('; '));
+  // }
 
   private redirect(url?: string) {
     if (!this.isBrowser || !url) return;
