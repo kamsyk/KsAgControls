@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of, take, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { RESPONSE } from '@angular/ssr';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -10,6 +11,8 @@ export class AuthService {
   private platformId = inject(PLATFORM_ID);
   private readonly tokenKey = 'auth_token';
   private router = inject(Router, { optional: true });
+   private response = inject(RESPONSE, { optional: true }); // SSR response
+
 
   private get isBrowser() {
     return isPlatformBrowser(this.platformId);
@@ -55,6 +58,24 @@ export class AuthService {
       map(() => true),
       catchError(() => of(false)),
     );
+  }
+
+  private setServerCookie(name: string, value: string, days = 7): void {
+    if (!this.response) return;
+
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const cookieOptions = [
+      `${name}=${encodeURIComponent(value)}`,
+      `expires=${expires.toUTCString()}`,
+      'path=/',
+      'SameSite=Strict',
+      'Secure',
+      'HttpOnly' // Server-side cookies can be HttpOnly for security
+    ];
+
+    this.response.setHeader('Set-Cookie', cookieOptions.join('; '));
   }
 
   private redirect(url?: string) {
