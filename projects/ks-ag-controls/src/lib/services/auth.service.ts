@@ -53,12 +53,51 @@ export class AuthService {
     }
   }
 
+  setToken(token: string): void {
+    if (!this.isBrowser) return;
+    try {
+      if (
+        this.authTokenStore === AuthTokenStore.localStorage ||
+        this.authTokenStore === AuthTokenStore.localStorageAndCookie
+      ) {
+        localStorage.setItem(this.getTokenKey(), token);
+      }
+
+      if (
+        this.authTokenStore === AuthTokenStore.cookie ||
+        this.authTokenStore === AuthTokenStore.localStorageAndCookie
+      ) {
+        this.cookieService.set(this.getTokenKey(), token, {
+          expires: this.authConfig.tokenExpireDays,
+          path: '/',
+          //domain: undefined,
+          secure: this.authConfig.cookieSecure,
+          //sameSite: 'Strict',
+        });
+      }
+    } catch {
+      throw new Error('Failed to store the authentication token.');
+    }
+  }
+
   logout(): void {
     if (!this.isBrowser) return;
     try {
-      localStorage.removeItem(this.tokenKey);
+      if (
+        this.authTokenStore === AuthTokenStore.localStorage ||
+        this.authTokenStore === AuthTokenStore.localStorageAndCookie
+      ) {
+        localStorage.removeItem(this.tokenKey);
+      }
+
+      if (
+        this.authTokenStore === AuthTokenStore.cookie ||
+        this.authTokenStore === AuthTokenStore.localStorageAndCookie
+      ) {
+        this.cookieService.delete(this.getTokenKey());
+      }
     } catch {
-      void 0;
+      throw new Error('Failed to remove the authentication token.');
     }
   }
 
@@ -73,28 +112,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(loginUrl, { email, password }).pipe(
       take(1),
       tap((res) => {
-        if (this.isBrowser) {
-          const token = res.accessToken ?? res.AccessToken ?? '';
-          if (
-            this.authTokenStore === AuthTokenStore.localStorage ||
-            this.authTokenStore === AuthTokenStore.localStorageAndCookie
-          ) {
-            localStorage.setItem(this.getTokenKey(), token);
-          }
-
-          if (
-            this.authTokenStore === AuthTokenStore.cookie ||
-            this.authTokenStore === AuthTokenStore.localStorageAndCookie
-          ) {
-            this.cookieService.set(this.getTokenKey(), token, {
-              expires: this.authConfig.tokenExpireDays,
-              path: '/',
-              //domain: undefined,
-              secure: this.authConfig.cookieSecure,
-              sameSite: 'Strict',
-            });
-          }
-        }
+        const token = res.accessToken ?? res.AccessToken ?? '';
+        this.setToken(token);
         this.redirect(redirectUrl);
       }),
       map(() => true),
