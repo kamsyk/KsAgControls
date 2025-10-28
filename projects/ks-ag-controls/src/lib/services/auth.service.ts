@@ -72,7 +72,7 @@ export class AuthService {
           path: '/',
           //domain: undefined,
           secure: this.authConfig.cookieSecure,
-          //sameSite: 'Strict',
+          sameSite: 'Strict',
         });
       }
     } catch {
