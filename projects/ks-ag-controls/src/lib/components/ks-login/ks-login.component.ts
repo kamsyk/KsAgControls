@@ -4,10 +4,11 @@ import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'lib-ks-login',
-  imports: [MatLabel, MatFormField, ReactiveFormsModule],
+  imports: [MatLabel, MatFormField, MatInputModule, ReactiveFormsModule],
   templateUrl: './ks-login.component.html',
   styleUrl: './ks-login.component.css',
 })
@@ -45,7 +46,7 @@ export class KsLoginComponent {
           this.loading = false;
           if (ok) {
             this.loginSuccess.emit({
-              email
+              email,
             });
           } else {
             this.error = 'Invalid credentials';
