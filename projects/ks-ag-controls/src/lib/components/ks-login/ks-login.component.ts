@@ -45,7 +45,7 @@ export class KsLoginComponent {
           this.loading = false;
           if (ok) {
             this.loginSuccess.emit({
-              email
+              email,
             });
           } else {
             this.error = 'Invalid credentials';

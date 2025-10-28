@@ -3,7 +3,12 @@
 {
   "extends": "./tsconfig.lib.json",
   "compilerOptions": {
-    "declarationMap": false
+    "declarationMap": false,
+    "paths": {
+      "@environment": [
+        "projects/ks-ag-controls/src/environments/environment.prod.ts"
+      ]
+    }
   },
   "angularCompilerOptions": {
     "compilationMode": "partial"
