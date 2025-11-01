@@ -38,24 +38,28 @@ export class KsLoginComponent {
       email: string;
       password: string;
     };
-    this.authService
-      .login(email, password, this.loginUrl(), this.redirectUrl())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (ok) => {
-          this.loading = false;
-          if (ok) {
-            this.loginSuccess.emit({
-              email,
-            });
-          } else {
-            this.error = 'Invalid credentials';
-          }
-        },
-        error: () => {
-          this.loading = false;
-          this.error = 'An error occurred during login';
-        },
-      });
+
+    this.loginSuccess.emit({
+               email,
+             });
+    // this.authService
+    //   .login(email, password, this.loginUrl(), this.redirectUrl())
+    //   .pipe(takeUntilDestroyed(this.destroyRef))
+    //   .subscribe({
+    //     next: (ok) => {
+    //       this.loading = false;
+    //       if (ok) {
+    //         this.loginSuccess.emit({
+    //           email,
+    //         });
+    //       } else {
+    //         this.error = 'Invalid credentials';
+    //       }
+    //     },
+    //     error: () => {
+    //       this.loading = false;
+    //       this.error = 'An error occurred during login';
+    //     },
+    //   });
   }
 }

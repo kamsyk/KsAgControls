@@ -75,7 +75,7 @@ export class AuthService {
       tap((res) => {
         //const token = res.accessToken ?? res.AccessToken ?? '';
         //this.setToken(token);
-        this.redirect(redirectUrl);
+       // this.redirect(redirectUrl);
       }),
       map(() => true),
       catchError(() => of(false)),
