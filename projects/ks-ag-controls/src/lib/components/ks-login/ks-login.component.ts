@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject, input, output } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 
@@ -38,8 +38,14 @@ export class KsLoginComponent {
       email: string;
       password: string;
     };
+
+    const loginRequest: LoginRequest = {
+      username: email,
+      password: password
+    };
+
     this.authService
-      .login(email, password, this.loginUrl(), this.redirectUrl())
+      .login(loginRequest, this.loginUrl(), this.redirectUrl())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ok) => {
