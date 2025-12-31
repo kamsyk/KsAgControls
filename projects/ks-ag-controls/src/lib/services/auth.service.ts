@@ -127,16 +127,16 @@ export class AuthService {
     this.authStateSubject.next(isAuth);
   }
 
-  // Method to get protected data (example)
-  getProtectedData(): Observable<any> {
-    return this.http.get(`${this.API_BASE}/data/protected`);
-  }
+  // // Method to get protected data (example)
+  // getProtectedData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/protected`);
+  // }
 
-  getUserSpecificData(): Observable<any> {
-    return this.http.get(`${this.API_BASE}/data/user-specific`);
-  }
+  // getUserSpecificData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/user-specific`);
+  // }
 
-  getPublicData(): Observable<any> {
-    return this.http.get(`${this.API_BASE}/data/public`);
-  }
+  // getPublicData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/public`);
+  // }
 }
