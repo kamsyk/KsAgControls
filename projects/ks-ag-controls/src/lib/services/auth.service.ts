@@ -46,7 +46,7 @@ export class AuthService {
     this.checkAuthStatus();
   }
 
-  login(credentials: LoginRequest, loginUrl: string, redirectUrl: string): Observable<LoginResponse> {
+  login(credentials: LoginRequest, loginUrl: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(loginUrl, credentials)
       .pipe(
         map(response => {

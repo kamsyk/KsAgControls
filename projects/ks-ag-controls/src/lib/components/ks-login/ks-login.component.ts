@@ -45,7 +45,7 @@ export class KsLoginComponent {
     };
 
     this.authService
-      .login(loginRequest, this.loginUrl(), this.redirectUrl())
+      .login(loginRequest, this.loginUrl())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ok) => {
