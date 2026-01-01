@@ -64,24 +64,34 @@ export class AuthService {
       );
   }
 
-  logout(): Observable<any> {
-    return this.http.post(`${this.API_BASE}/auth/logout`, {})
-      .pipe(
-        map(() => {
-          this.setAuthState(false);
-          this.currentUser.set(null);
-          this.router.navigate(['/login']);
-          return { success: true };
-        }),
-        catchError(error => {
-          console.error('Logout error:', error);
-          // Even if logout fails on server, clear local state
-          this.setAuthState(false);
-          this.currentUser.set(null);
-          this.router.navigate(['/login']);
-          return of({ success: true });
-        })
-      );
+  // logout(): Observable<any> {
+  //   // //TODO: KSY Delete Console Log
+  //   // debugger;
+  //   // console.log('Logging out user ' + `${this.API_BASE}/auth/logout`);
+  //   //return this.http.post(`${this.API_BASE}/auth/logout`, {})
+  //   const credentials: LoginRequest = { username: '', password: '' };
+  //   return this.http.post<LoginResponse>(`${this.API_BASE}/auth/login`, credentials)
+  //     .pipe(
+  //       map(() => {
+  //         this.setAuthState(false);
+  //         this.currentUser.set(null);
+  //         //this.router.navigate(['/login']);
+  //         return { success: true };
+  //       }),
+  //       catchError(error => {
+  //         console.error('Logout error:', error);
+  //         // Even if logout fails on server, clear local state
+  //         this.setAuthState(false);
+  //         this.currentUser.set(null);
+  //         this.router.navigate(['/login']);
+  //         return of({ success: true });
+  //       })
+  //     );
+  // }
+
+  logout(): Observable<{ success: boolean; message: string }> {
+    const baseUrl = 'http://localhost:5026/api/auth'; // .NET API server URL
+    return this.http.post<{ success: boolean; message: string }>(`${baseUrl}/logout`, {});
   }
 
   getCurrentUser(): Observable<User> {
