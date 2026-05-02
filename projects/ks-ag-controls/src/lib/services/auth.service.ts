@@ -91,7 +91,22 @@ export class AuthService {
 
   logout(): Observable<{ success: boolean; message: string }> {
     const baseUrl = 'http://localhost:5026/api/auth'; // .NET API server URL
-    return this.http.post<{ success: boolean; message: string }>(`${baseUrl}/logout`, {});
+    return this.http.post<{ success: boolean; message: string }>(`${baseUrl}/logout`, {})
+    .pipe(
+      map(response => {
+        this.setAuthState(false);
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+        return response;
+      }),
+      catchError(error => {
+        console.error('Logout error:', error);
+        this.setAuthState(false);
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+        return of({ success: false, message: 'Logout failed' });
+      })
+    );
   }
 
   getCurrentUser(): Observable<User> {
