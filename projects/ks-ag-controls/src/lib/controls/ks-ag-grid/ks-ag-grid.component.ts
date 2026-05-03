@@ -15,13 +15,13 @@ import {
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
 })
-export class KsAgGridComponent {
-  @Input() rowData: Record<string, unknown>[] | null = [];
-  @Input() columnDefs: ColDef[] | null = [];
+export class KsAgGridComponent<TData = unknown> {
+  @Input() rowData: TData[] | null | undefined = [];
+  @Input() columnDefs: ColDef<TData>[] | null = [];
 
   readonly theme: Theme = themeQuartz;
   readonly modules: Module[] = [ClientSideRowModelModule];
-  readonly defaultColDef: ColDef = {
+  readonly defaultColDef: ColDef<TData> = {
     flex: 1,
     minWidth: 120,
     sortable: true,
