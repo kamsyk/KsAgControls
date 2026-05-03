@@ -17,15 +17,10 @@ import {
 })
 export class KsAgGridComponent {
   @Input() rowData: Record<string, unknown>[] | null = [];
+  @Input() columnDefs: ColDef[] | null = [];
 
   readonly theme: Theme = themeQuartz;
   readonly modules: Module[] = [ClientSideRowModelModule];
-  readonly columnDefs: ColDef[] = [
-    { field: 'sport' },
-    { field: 'athlete' },
-    { field: 'country' },
-    { field: 'gold', type: 'numericColumn' },
-  ];
   readonly defaultColDef: ColDef = {
     flex: 1,
     minWidth: 120,
