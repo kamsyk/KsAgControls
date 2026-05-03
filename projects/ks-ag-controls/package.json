@@ -2,6 +2,8 @@
   "name": "ks-ag-controls",
   "version": "0.0.6",
   "peerDependencies": {
+    "ag-grid-angular": "^35.2.1",
+    "ag-grid-community": "^35.2.1",
     "@angular/common": "^20.2.4",
     "@angular/core": "^20.2.4"
   },

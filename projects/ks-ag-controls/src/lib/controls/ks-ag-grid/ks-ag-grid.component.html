@@ -1,1 +1,14 @@
-<p>ks-ag-grid works!</p>
+<ag-grid-angular
+          class="sports-grid"
+          [theme]="theme"
+          style="width: 100%; min-height: 280px;"
+          [modules]="modules"
+          [rowData]="rowData"
+          [columnDefs]="columnDefs"
+          [defaultColDef]="defaultColDef"
+          domLayout="autoHeight"
+          [pagination]="true"
+          [paginationPageSize]="25"
+          [animateRows]="true"
+          [loading]="loading">
+        </ag-grid-angular>
