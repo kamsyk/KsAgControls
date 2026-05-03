@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { AgGridAngular } from 'ag-grid-angular';
+import { AgGridModule } from 'ag-grid-angular';
 import {
   ClientSideRowModelModule,
   ColDef,
@@ -10,7 +10,7 @@ import {
 
 @Component({
   selector: 'lib-ks-ag-grid',
-  imports: [AgGridAngular],
+  imports: [AgGridModule],
   templateUrl: './ks-ag-grid.component.html',
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
