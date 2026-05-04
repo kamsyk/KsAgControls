@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject, input, output } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 
@@ -20,13 +20,13 @@ export class KsLoginComponent {
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
 
-  loginSuccess = output<{ email: string }>();
+  loginSuccess = output<{ username: string }>();
 
   loading = false;
   error = '';
 
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    username: ['', [Validators.required]],
     password: ['', [Validators.required]],
   });
 
@@ -34,20 +34,29 @@ export class KsLoginComponent {
     if (this.form.invalid) return;
     this.loading = true;
     this.error = '';
-    const { email, password } = this.form.value as {
-      email: string;
+    const { username, password } = this.form.value as {
+      username: string;
       password: string;
     };
+
+    const loginRequest: LoginRequest = {
+      username: username,
+      password: password
+    };
+
     this.authService
-      .login(email, password, this.loginUrl(), this.redirectUrl())
+      .login(loginRequest, this.loginUrl())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ok) => {
           this.loading = false;
           if (ok) {
             this.loginSuccess.emit({
-              email,
+              username,
             });
+            if(this.redirectUrl()) {
+              window.location.href = this.redirectUrl();
+            }
           } else {
             this.error = 'Invalid credentials';
           }

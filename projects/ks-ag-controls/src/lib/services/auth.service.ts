@@ -1,140 +1,167 @@
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, of, take, tap } from 'rxjs';
 import { Router } from '@angular/router';
-import { SsrCookieService } from 'ngx-cookie-service-ssr';
-import { AUTH_TOKEN_KEY } from '../tokens/auth-token-key.token';
-import {
-  AUTH_TOKEN_STORE,
-  AuthTokenStore,
-} from '../tokens/auth-token-store.token';
-import { AUTH_CONFIG, DEFAULT_AUTH_CONFIG } from '../tokens';
+import { Observable, BehaviorSubject, catchError, map, of } from 'rxjs';
 
-@Injectable({ providedIn: 'root' })
+export interface User {
+  username: string;
+  fullName: string;
+  userId: string;
+  isAuthenticated: boolean;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  user?: {
+    username: string;
+    fullName: string;
+  };
+}
+
+@Injectable({
+  providedIn: 'root'
+})
 export class AuthService {
   private http = inject(HttpClient);
-  private platformId = inject(PLATFORM_ID);
-  private router = inject(Router, { optional: true });
-  private cookieService = inject(SsrCookieService);
-  private tokenKey = inject(AUTH_TOKEN_KEY, { optional: true }) || 'auth_token';
-  private authTokenStore =
-    inject(AUTH_TOKEN_STORE, { optional: true }) || AuthTokenStore.cookie;
-  private authConfig =
-    inject(AUTH_CONFIG, { optional: true }) ?? DEFAULT_AUTH_CONFIG;
+  private router = inject(Router);
 
-  private get isBrowser() {
-    return isPlatformBrowser(this.platformId);
+  //private readonly API_BASE = 'https://localhost:7107/api';
+  private readonly API_BASE = 'http://localhost:5026/api';
+
+  // Using signals for reactive state management
+  public isAuthenticated = signal<boolean>(false);
+  public currentUser = signal<User | null>(null);
+
+  // For backwards compatibility with observables
+  private authStateSubject = new BehaviorSubject<boolean>(false);
+  public authState$ = this.authStateSubject.asObservable();
+
+  constructor() {
+    this.checkAuthStatus();
   }
 
-  private getTokenKey(): string {
-    return this.tokenKey || 'auth_token';
+  login(credentials: LoginRequest, loginUrl: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(loginUrl, credentials)
+      .pipe(
+        map(response => {
+          if (response.success && response.user) {
+            this.setAuthState(true);
+            this.getCurrentUser().subscribe(); // Fetch full user details
+          }
+          return response;
+        }),
+        catchError(error => {
+          console.error('Login error:', error);
+          this.setAuthState(false);
+          return of({ success: false, message: 'Login failed' });
+        })
+      );
   }
 
-  isAuthenticated(): boolean {
-    return !!this.getToken();
-  }
+  // logout(): Observable<any> {
+  //   // //TODO: KSY Delete Console Log
+  //   // debugger;
+  //   // console.log('Logging out user ' + `${this.API_BASE}/auth/logout`);
+  //   //return this.http.post(`${this.API_BASE}/auth/logout`, {})
+  //   const credentials: LoginRequest = { username: '', password: '' };
+  //   return this.http.post<LoginResponse>(`${this.API_BASE}/auth/login`, credentials)
+  //     .pipe(
+  //       map(() => {
+  //         this.setAuthState(false);
+  //         this.currentUser.set(null);
+  //         //this.router.navigate(['/login']);
+  //         return { success: true };
+  //       }),
+  //       catchError(error => {
+  //         console.error('Logout error:', error);
+  //         // Even if logout fails on server, clear local state
+  //         this.setAuthState(false);
+  //         this.currentUser.set(null);
+  //         this.router.navigate(['/login']);
+  //         return of({ success: true });
+  //       })
+  //     );
+  // }
 
-  getToken(): string | null {
-    if (this.authTokenStore === AuthTokenStore.localStorage) {
-      if (!this.isBrowser) {
-        throw new Error('LocalStorage is not available on the server side.');
-      }
-    }
-
-    if (!this.isBrowser) {
-      return this.cookieService.get(this.getTokenKey());
-      //return null;
-    }
-    try {
-      return localStorage.getItem(this.getTokenKey());
-    } catch {
-      return null;
-    }
-  }
-
-  setToken(token: string): void {
-    if (!this.isBrowser) return;
-    try {
-      if (
-        this.authTokenStore === AuthTokenStore.localStorage ||
-        this.authTokenStore === AuthTokenStore.localStorageAndCookie
-      ) {
-        localStorage.setItem(this.getTokenKey(), token);
-      }
-
-      if (
-        this.authTokenStore === AuthTokenStore.cookie ||
-        this.authTokenStore === AuthTokenStore.localStorageAndCookie
-      ) {
-        this.cookieService.set(this.getTokenKey(), token, {
-          expires: this.authConfig.tokenExpireDays,
-          path: '/',
-          //domain: undefined,
-          secure: this.authConfig.cookieSecure,
-          sameSite: 'Strict',
-        });
-      }
-    } catch {
-      throw new Error('Failed to store the authentication token.');
-    }
-  }
-
-  logout(): void {
-    if (!this.isBrowser) return;
-    try {
-      if (
-        this.authTokenStore === AuthTokenStore.localStorage ||
-        this.authTokenStore === AuthTokenStore.localStorageAndCookie
-      ) {
-        localStorage.removeItem(this.tokenKey);
-      }
-
-      if (
-        this.authTokenStore === AuthTokenStore.cookie ||
-        this.authTokenStore === AuthTokenStore.localStorageAndCookie
-      ) {
-        this.cookieService.delete(this.getTokenKey());
-      }
-    } catch {
-      throw new Error('Failed to remove the authentication token.');
-    }
-  }
-
-  login(
-    email: string,
-    password: string,
-    loginUrl: string,
-    redirectUrl: string,
-  ) {
-    //TODO: KSY encrypt token before storage
-
-    return this.http.post<AuthResponse>(loginUrl, { email, password }).pipe(
-      take(1),
-      tap((res) => {
-        const token = res.accessToken ?? res.AccessToken ?? '';
-        this.setToken(token);
-        this.redirect(redirectUrl);
+  logout(): Observable<{ success: boolean; message: string }> {
+    const baseUrl = 'http://localhost:5026/api/auth'; // .NET API server URL
+    return this.http.post<{ success: boolean; message: string }>(`${baseUrl}/logout`, {})
+    .pipe(
+      map(response => {
+        this.setAuthState(false);
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+        return response;
       }),
-      map(() => true),
-      catchError(() => of(false)),
+      catchError(error => {
+        console.error('Logout error:', error);
+        this.setAuthState(false);
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+        return of({ success: false, message: 'Logout failed' });
+      })
     );
   }
 
-  private redirect(url?: string) {
-    if (!this.isBrowser || !url) return;
-    const isAbsolute = /^https?:\/\//i.test(url);
-    if (!isAbsolute && this.router) {
-      void this.router.navigateByUrl(url);
-    } else {
-      window.location.assign(url);
-    }
+  getCurrentUser(): Observable<User> {
+    return this.http.get<User>(`${this.API_BASE}/auth/me`)
+      .pipe(
+        map(user => {
+          this.currentUser.set(user);
+          this.setAuthState(true);
+          return user;
+        }),
+        catchError(error => {
+          console.error('Get current user error:', error);
+          this.setAuthState(false);
+          this.currentUser.set(null);
+          throw error;
+        })
+      );
   }
-}
 
-interface AuthResponse {
-  accessToken?: string;
-  AccessToken?: string;
-  expiresAt?: string | Date;
-  tokenType?: string;
+  checkAuthStatus(): Observable<{isAuthenticated: boolean, username?: string}> {
+    return this.http.get<{isAuthenticated: boolean, username?: string}>(`${this.API_BASE}/auth/check`)
+      .pipe(
+        map(response => {
+          this.setAuthState(response.isAuthenticated);
+          if (response.isAuthenticated) {
+            this.getCurrentUser().subscribe();
+          } else {
+            this.currentUser.set(null);
+          }
+          return response;
+        }),
+        catchError(error => {
+          console.error('Auth check error:', error);
+          this.setAuthState(false);
+          this.currentUser.set(null);
+          return of({ isAuthenticated: false });
+        })
+      );
+  }
+
+  private setAuthState(isAuth: boolean): void {
+    this.isAuthenticated.set(isAuth);
+    this.authStateSubject.next(isAuth);
+  }
+
+  // // Method to get protected data (example)
+  // getProtectedData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/protected`);
+  // }
+
+  // getUserSpecificData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/user-specific`);
+  // }
+
+  // getPublicData(): Observable<any> {
+  //   return this.http.get(`${this.API_BASE}/data/public`);
+  // }
 }
