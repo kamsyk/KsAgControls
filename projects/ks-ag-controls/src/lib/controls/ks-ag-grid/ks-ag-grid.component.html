@@ -1,14 +1,17 @@
 <ag-grid-angular
-          class="ag-theme-quartz {{ class }}"
+          [class]="gridClass"
           [theme]="theme"
           [style]="style"
           [modules]="modules"
-          [rowData]="rowData"
+          [rowModelType]="rowModelType"
+          [rowData]="useServerSideData ? undefined : rowData"
+          [datasource]="datasource"
           [columnDefs]="columnDefs"
           [defaultColDef]="defaultColDef"
           domLayout="autoHeight"
           [pagination]="true"
-          [paginationPageSize]="25"
+          [paginationPageSize]="pageSize"
+          [cacheBlockSize]="pageSize"
           [animateRows]="true"
           [loading]="loading">
         </ag-grid-angular>
