@@ -18,6 +18,8 @@ import {
 export class KsAgGridComponent<TData = unknown> {
   @Input() rowData: TData[] | null | undefined = [];
   @Input() columnDefs: ColDef<TData>[] | null = [];
+  @Input() class: string | null = null;
+  @Input() style: string | null = null;
 
   readonly theme: Theme = themeQuartz;
   readonly modules: Module[] = [ClientSideRowModelModule];
