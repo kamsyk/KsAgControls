@@ -5,10 +5,11 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
+import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
 
 @Component({
   selector: 'lib-ks-login',
-  imports: [MatLabel, MatFormField, MatInputModule, ReactiveFormsModule],
+  imports: [MatLabel, MatFormField, MatInputModule, ReactiveFormsModule, KsButtonComponent],
   templateUrl: './ks-login.component.html',
   styleUrl: './ks-login.component.css',
 })

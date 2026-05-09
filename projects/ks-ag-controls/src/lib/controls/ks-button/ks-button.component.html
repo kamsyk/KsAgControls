@@ -1,0 +1,14 @@
+@switch (variant) {
+  @case ('basic') {
+    <button mat-button [color]="buttonColor" [type]="type" [disabled]="disabled" [class.submit-button]="type === 'submit'">{{ label }}</button>
+  }
+  @case ('stroked') {
+    <button mat-stroked-button [color]="buttonColor" [type]="type" [disabled]="disabled" [class.submit-button]="type === 'submit'">{{ label }}</button>
+  }
+  @case ('flat') {
+    <button mat-flat-button [color]="buttonColor" [type]="type" [disabled]="disabled" [class.submit-button]="type === 'submit'">{{ label }}</button>
+  }
+  @default {
+    <button mat-raised-button [color]="buttonColor" [type]="type" [disabled]="disabled" [class.submit-button]="type === 'submit'">{{ label }}</button>
+  }
+}
