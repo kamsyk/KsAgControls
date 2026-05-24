@@ -60,6 +60,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() class: string | null = null;
   @Input() style: string | null = null;
   @Input() pageSize = 25;
+  @Input() themeMode: 'light' | 'dark' = 'light';
 
   // Uses Infinite Row Model (AG Grid Community) for server-driven sorting and filtering.
   @Input() useServerSideData = false;
@@ -67,7 +68,16 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() serverDataService?: KsAgGridServerDataService<TData>;
   @Input() fetchServerRows?: KsAgGridServerRowsFetcher<TData>;
 
-  readonly theme: Theme = themeQuartz;
+  private readonly lightTheme: Theme = themeQuartz;
+  private readonly darkTheme: Theme = themeQuartz.withParams({
+    backgroundColor: '#1e1e1e',
+    foregroundColor: '#ffffff',
+    browserColorScheme: 'dark',
+  });
+
+  get theme(): Theme {
+    return this.themeMode === 'dark' ? this.darkTheme : this.lightTheme;
+  }
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
   readonly defaultColDef: ColDef<TData> = {
     flex: 1,
@@ -85,7 +95,8 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   }
 
   get gridClass(): string {
-    return this.class ? `ag-theme-quartz ${this.class}` : 'ag-theme-quartz';
+    const themeClass = this.themeMode === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
+    return this.class ? `${themeClass} ${this.class}` : themeClass;
   }
 
   ngOnInit(): void {
