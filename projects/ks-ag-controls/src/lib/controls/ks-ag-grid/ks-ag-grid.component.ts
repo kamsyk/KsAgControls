@@ -1,14 +1,18 @@
 import {
   Component,
+  EventEmitter,
   Input,
   OnChanges,
   OnInit,
+  Output,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
-import { AgGridModule } from 'ag-grid-angular';
+import { AgGridAngular, AgGridModule } from 'ag-grid-angular';
 import {
   ClientSideRowModelModule,
   ColDef,
+  ColumnState,
   IDatasource,
   IGetRowsParams,
   InfiniteRowModelModule,
@@ -47,6 +51,12 @@ export type KsAgGridServerRowsFetcher<TData = unknown> = (
   | Promise<KsAgGridServerResult<TData>>
   | import('rxjs').Observable<KsAgGridServerResult<TData>>;
 
+export interface KsAgGridState {
+  columnState: ColumnState[];
+  filterModel: Record<string, unknown>;
+  sortModel: unknown;
+}
+
 @Component({
   selector: 'lib-ks-ag-grid',
   imports: [AgGridModule],
@@ -55,6 +65,8 @@ export type KsAgGridServerRowsFetcher<TData = unknown> = (
   standalone: true,
 })
 export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
+  @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
+
   @Input() rowData: TData[] | null | undefined = [];
   @Input() columnDefs: ColDef<TData>[] | null = [];
   @Input() class: string | null = null;
@@ -67,6 +79,15 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() serverDataSource?: IDatasource;
   @Input() serverDataService?: KsAgGridServerDataService<TData>;
   @Input() fetchServerRows?: KsAgGridServerRowsFetcher<TData>;
+
+  // Settings persistence
+  @Input() enableSettingsPersistence = false;
+  @Input() settingsStorageKey = 'ks-ag-grid-settings';
+  @Input() autoRestoreSettings = true;
+
+  @Output() settingsSaved = new EventEmitter<KsAgGridState>();
+  @Output() settingsCleared = new EventEmitter<void>();
+  @Output() settingsRestored = new EventEmitter<KsAgGridState>();
 
   private readonly lightTheme: Theme = themeQuartz;
   private readonly darkTheme: Theme = themeQuartz.withParams({
@@ -175,6 +196,86 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     }
 
     return Promise.resolve(response);
+  }
+
+  /**
+   * Save current grid settings to localStorage
+   */
+  saveSettings(): void {
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return;
+    }
+
+    const state: KsAgGridState = {
+      columnState: this.agGrid.api.getColumnState() ?? [],
+      filterModel: this.agGrid.api.getFilterModel() ?? {},
+      sortModel: this.agGrid.api.getColumnState()
+        ?.filter((col: ColumnState) => col.sort != null)
+        .map((col: ColumnState) => ({ colId: col.colId, sort: col.sort, sortIndex: col.sortIndex })) ?? [],
+    };
+
+    try {
+      localStorage.setItem(this.settingsStorageKey, JSON.stringify(state));
+      this.settingsSaved.emit(state);
+    } catch (error) {
+      console.error('Failed to save grid settings:', error);
+    }
+  }
+
+  /**
+   * Clear saved grid settings from localStorage
+   */
+  clearSettings(): void {
+    try {
+      localStorage.removeItem(this.settingsStorageKey);
+      this.settingsCleared.emit();
+    } catch (error) {
+      console.error('Failed to clear grid settings:', error);
+    }
+  }
+
+  /**
+   * Restore grid settings from localStorage
+   */
+  restoreSettings(): boolean {
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return false;
+    }
+
+    try {
+      const savedSettings = localStorage.getItem(this.settingsStorageKey);
+      if (!savedSettings) {
+        return false;
+      }
+
+      const state: KsAgGridState = JSON.parse(savedSettings);
+
+      if (state.columnState) {
+        this.agGrid.api.applyColumnState({ state: state.columnState, applyOrder: true });
+      }
+
+      if (state.filterModel) {
+        this.agGrid.api.setFilterModel(state.filterModel);
+      }
+
+      this.settingsRestored.emit(state);
+      return true;
+    } catch (error) {
+      console.error('Failed to restore grid settings:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Called when grid is ready
+   */
+  onGridReady(): void {
+    if (this.enableSettingsPersistence && this.autoRestoreSettings) {
+      // Defer restoration to ensure grid is fully initialized
+      setTimeout(() => this.restoreSettings(), 0);
+    }
   }
 
 }
