@@ -21,10 +21,26 @@ ng generate --help
 To build the library, run:
 
 ```bash
-ng build ks-ag-controls
+npm run build
 ```
 
 This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
+
+### Library Tailwind Styles
+
+This library precompiles Tailwind styles into `styles/ks-ag-controls.css` during `npm run build`.
+
+In consuming apps, import the packaged stylesheet once in global styles:
+
+```css
+@import 'ks-ag-controls/styles/ks-ag-controls.css';
+```
+
+If you build only the library entrypoint directly (`ng build ks-ag-controls`), run this first so styles stay in sync:
+
+```bash
+npm run build:lib:styles
+```
 
 ### Publishing the Library
 

@@ -3,5 +3,12 @@
   "dest": "../../dist/ks-ag-controls",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "assets": [
+    {
+      "glob": "ks-ag-controls.css",
+      "input": "src/styles",
+      "output": "styles"
+    }
+  ]
 }

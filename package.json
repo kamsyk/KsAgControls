@@ -4,8 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "build": "npm run build:lib:styles && ng build",
+    "watch": "npm run build:lib:styles && ng build --watch --configuration development",
+    "build:lib:styles": "tailwindcss -c projects/ks-ag-controls/tailwind.config.js -i projects/ks-ag-controls/src/styles/tailwind-input.css -o projects/ks-ag-controls/src/styles/ks-ag-controls.css --minify",
     "test": "ng test",
     "lint": "ng lint"
   },

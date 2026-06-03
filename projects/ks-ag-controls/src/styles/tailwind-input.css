@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+button.ks-submit-button.mat-mdc-button-base {
+  background-color: theme('colors.green.600') !important;
+  color: theme('colors.white') !important;
+  @apply font-semibold py-2 px-6 rounded-lg transition duration-200 ease-in-out;
+}
+
+button.ks-submit-button.mat-mdc-button-base:hover:not(:disabled) {
+  background-color: theme('colors.green.700') !important;
+}
+
+button.ks-submit-button.mat-mdc-button-base:disabled {
+  background-color: theme('colors.gray.400') !important;
+  @apply cursor-not-allowed;
+}
+
+button.ks-submit-button.mat-mdc-button-base:focus-visible {
+  @apply outline-none ring-2 ring-green-500 ring-offset-2;
+}

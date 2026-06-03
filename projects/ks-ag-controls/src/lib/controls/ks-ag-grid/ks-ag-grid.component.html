@@ -1,4 +1,12 @@
-<ag-grid-angular
+<div>
+  @if (enableSettingsPersistence) {
+    <div class="grid-toolbar">
+      <button (click)="saveSettings()">Save Settings</button>
+      <button (click)="clearSettings()">Clear Settings</button>
+    </div>
+  }
+
+  <ag-grid-angular
           [class]="gridClass"
           [theme]="theme"
           [style]="style"
@@ -13,5 +21,7 @@
           [paginationPageSize]="pageSize"
           [cacheBlockSize]="pageSize"
           [animateRows]="true"
-          [loading]="loading">
+          [loading]="loading"
+          (gridReady)="onGridReady()">
         </ag-grid-angular>
+</div>

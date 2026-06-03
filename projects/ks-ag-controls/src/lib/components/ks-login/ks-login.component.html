@@ -25,14 +25,13 @@
     }
 
     <div mat-dialog-actions>
-      <button
-        mat-flat-button
+      <lib-ks-button
+        label="Sign in"
+        variant="flat"
         color="primary"
         [disabled]="loading || form.invalid"
         type="submit"
-      >
-        {{ loading ? "Signing in…" : "Sign in" }}
-      </button>
+      >{{ loading ? "Signing in…" : "Sign in" }}</lib-ks-button>
     </div>
   </form>
 </div>
