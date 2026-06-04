@@ -1,5 +1,6 @@
 import {
   Component,
+  HostBinding,
   Input,
   OnChanges,
   OnInit,
@@ -47,12 +48,18 @@ export type KsAgGridServerRowsFetcher<TData = unknown> = (
   | Promise<KsAgGridServerResult<TData>>
   | import('rxjs').Observable<KsAgGridServerResult<TData>>;
 
+/** AG Grid `data-ag-theme-mode` values (see AG Grid theming colours docs). */
+export type KsAgGridThemeMode = 'light' | 'dark' | 'dark-blue' | 'dark-warm';
+
 @Component({
   selector: 'lib-ks-ag-grid',
   imports: [AgGridModule],
   templateUrl: './ks-ag-grid.component.html',
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
+  host: {
+    class: 'ks-ag-grid',
+  },
 })
 export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() rowData: TData[] | null | undefined = [];
@@ -66,6 +73,14 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() serverDataSource?: IDatasource;
   @Input() serverDataService?: KsAgGridServerDataService<TData>;
   @Input() fetchServerRows?: KsAgGridServerRowsFetcher<TData>;
+
+  /** When true, applies AG Grid's dark colour scheme. Ignored if {@link themeMode} is set. */
+  @Input() darkMode = false;
+
+  /**
+   * Explicit AG Grid theme mode (`data-ag-theme-mode`). When omitted, derived from {@link darkMode}.
+   */
+  @Input() themeMode?: KsAgGridThemeMode;
 
   readonly theme: Theme = themeQuartz;
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
@@ -86,6 +101,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
   get gridClass(): string {
     return this.class ? `ag-theme-quartz ${this.class}` : 'ag-theme-quartz';
+  }
+
+  @HostBinding('attr.data-ag-theme-mode')
+  get agThemeMode(): KsAgGridThemeMode {
+    return this.themeMode ?? (this.darkMode ? 'dark' : 'light');
   }
 
   ngOnInit(): void {
