@@ -277,5 +277,4 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       setTimeout(() => this.restoreSettings(), 0);
     }
   }
-
 }
