@@ -89,6 +89,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Output() settingsSaved = new EventEmitter<KsAgGridState>();
   @Output() settingsCleared = new EventEmitter<void>();
   @Output() settingsRestored = new EventEmitter<KsAgGridState>();
+  @Output() addItem = new EventEmitter<void>();
 
   private readonly lightTheme: Theme = themeQuartz;
   private readonly darkTheme: Theme = themeQuartz.withParams({
@@ -277,6 +278,13 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       // Defer restoration to ensure grid is fully initialized
       setTimeout(() => this.restoreSettings(), 0);
     }
+  }
+
+  /**
+   * Emit event to parent component to add a new item
+   */
+  addNewItem(): void {
+    this.addItem.emit();
   }
 
 }
