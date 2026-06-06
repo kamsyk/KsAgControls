@@ -1,0 +1,31 @@
+/* AG Grid Theme Customization */
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* Light Theme Customization */
+:host ::ng-deep .ag-theme-quartz {
+  --ag-background-color: #ffffff;
+  --ag-foreground-color: #181d1f;
+  --ag-border-color: #e0e0e0;
+  --ag-header-background-color: #f5f5f5;
+  --ag-odd-row-background-color: #fcfcfc;
+  --ag-row-hover-color: #f0f0f0;
+}
+
+/* Dark Theme Customization */
+:host ::ng-deep .ag-theme-quartz-dark {
+  --ag-background-color: #1e1e1e;
+  --ag-foreground-color: #ffffff;
+  --ag-border-color: #3a3a3a;
+  --ag-header-background-color: #2a2a2a;
+  --ag-odd-row-background-color: #252525;
+  --ag-row-hover-color: #333333;
+  --ag-selected-row-background-color: #3a4a5a;
+}
+
+/* Smooth transitions when switching themes */
+:host ::ng-deep .ag-root-wrapper {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
