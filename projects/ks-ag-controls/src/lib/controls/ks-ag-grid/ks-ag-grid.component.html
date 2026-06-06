@@ -15,7 +15,7 @@
           [rowModelType]="rowModelType"
           [rowData]="useServerSideData ? undefined : rowData"
           [datasource]="datasource"
-          [columnDefs]="columnDefs"
+          [columnDefs]="effectiveColumnDefs"
           [defaultColDef]="defaultColDef"
           domLayout="autoHeight"
           [pagination]="true"
@@ -24,6 +24,7 @@
           [cacheBlockSize]="pageSize"
           [animateRows]="true"
           [loading]="loading"
-          (gridReady)="onGridReady()">
+          (gridReady)="onGridReady()"
+          (cellValueChanged)="onCellValueChanged($event)">
         </ag-grid-angular>
 </div>

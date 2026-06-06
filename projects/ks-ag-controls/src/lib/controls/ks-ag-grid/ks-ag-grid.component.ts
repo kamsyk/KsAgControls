@@ -20,6 +20,9 @@ import {
   RowModelType,
   Theme,
   themeQuartz,
+  CellValueChangedEvent,
+  CellClickedEvent,
+  ICellRendererParams,
 } from 'ag-grid-community';
 import { firstValueFrom, isObservable } from 'rxjs';
 
@@ -86,10 +89,20 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() settingsStorageKey = 'ks-ag-grid-settings';
   @Input() autoRestoreSettings = true;
 
+  // Editing and deletion
+  @Input() enableEditing = false;
+  @Input() enableRowDeletion = false;
+  @Input() enableActionButtons = false; // Show edit/save/delete buttons in first column
+
   @Output() settingsSaved = new EventEmitter<KsAgGridState>();
   @Output() settingsCleared = new EventEmitter<void>();
   @Output() settingsRestored = new EventEmitter<KsAgGridState>();
   @Output() addItem = new EventEmitter<void>();
+  @Output() rowDeleted = new EventEmitter<TData>();
+  @Output() rowSaved = new EventEmitter<TData>();
+  @Output() cellValueChanged = new EventEmitter<{ data: TData; field: string; oldValue: unknown; newValue: unknown }>();
+
+  private editingRows = new Set<TData>();
 
   private readonly lightTheme: Theme = themeQuartz;
   private readonly darkTheme: Theme = themeQuartz.withParams({
@@ -102,13 +115,112 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     return this.themeMode === 'dark' ? this.darkTheme : this.lightTheme;
   }
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
-  readonly defaultColDef: ColDef<TData> = {
-    flex: 1,
-    minWidth: 120,
-    sortable: true,
-    filter: true,
-    resizable: true,
-  };
+
+  get defaultColDef(): ColDef<TData> {
+    return {
+      flex: 1,
+      minWidth: 120,
+      sortable: true,
+      filter: true,
+      resizable: true,
+      editable: (params) => {
+        if (this.enableActionButtons) {
+          // Only editable when row is in edit mode
+          return params.data ? this.editingRows.has(params.data) : false;
+        }
+        return this.enableEditing;
+      },
+    };
+  }
+
+  get effectiveColumnDefs(): ColDef<TData>[] {
+    if (!this.columnDefs) return [];
+
+    const columns: ColDef<TData>[] = [...this.columnDefs];
+
+    // Add action buttons column (edit/save/delete)
+    if (this.enableActionButtons) {
+      const actionsColumn = {
+        headerName: 'Actions',
+        width: 180,
+        minWidth: 180,
+        maxWidth: 180,
+        pinned: 'left',
+        sortable: false,
+        filter: false,
+        editable: false,
+        resizable: false,
+        cellRenderer: (params: ICellRendererParams<TData>) => {
+          if (!params.data) return '';
+
+          const isEditing = this.editingRows.has(params.data);
+
+          if (isEditing) {
+            return `
+              <div class="action-buttons">
+                <button class="save-btn" data-action="save">Save</button>
+                <button class="cancel-btn" data-action="cancel">Cancel</button>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="action-buttons">
+                <button class="edit-btn" data-action="edit">Edit</button>
+                <button class="delete-btn" data-action="delete">Delete</button>
+              </div>
+            `;
+          }
+        },
+        onCellClicked: (params: CellClickedEvent<TData>) => {
+          if (!params.data) return;
+
+          const target = (params.event as MouseEvent).target as HTMLElement;
+          const action = target.getAttribute('data-action');
+
+          switch (action) {
+            case 'edit':
+              this.enterEditMode(params.data);
+              break;
+            case 'save':
+              this.saveRow(params.data);
+              break;
+            case 'cancel':
+              this.cancelEdit(params.data);
+              break;
+            case 'delete':
+              this.deleteRow(params.data);
+              break;
+          }
+        },
+      } as ColDef<TData>;
+      columns.unshift(actionsColumn);
+    }
+    // Fallback to simple delete button column
+    else if (this.enableRowDeletion) {
+      const deleteColumn = {
+        headerName: '',
+        width: 70,
+        minWidth: 70,
+        maxWidth: 70,
+        pinned: 'left',
+        sortable: false,
+        filter: false,
+        editable: false,
+        resizable: false,
+        cellRenderer: () => {
+          return '<button class="delete-btn" style="cursor: pointer; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px;">Delete</button>';
+        },
+        onCellClicked: (params: CellClickedEvent<TData>) => {
+          if (params.data) {
+            this.deleteRow(params.data);
+          }
+        },
+      } as ColDef<TData>;
+      columns.unshift(deleteColumn);
+    }
+
+    return columns;
+  }
 
   datasource?: IDatasource;
   loading = false;
@@ -285,6 +397,78 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    */
   addNewItem(): void {
     this.addItem.emit();
+  }
+
+  /**
+   * Enter edit mode for a row
+   */
+  enterEditMode(data: TData): void {
+    this.editingRows.add(data);
+    this.refreshGrid();
+  }
+
+  /**
+   * Save row changes and exit edit mode
+   */
+  saveRow(data: TData): void {
+    this.editingRows.delete(data);
+    this.rowSaved.emit(data);
+    this.refreshGrid();
+  }
+
+  /**
+   * Cancel editing and exit edit mode
+   */
+  cancelEdit(data: TData): void {
+    this.editingRows.delete(data);
+    this.refreshGrid();
+  }
+
+  /**
+   * Delete a row from the grid
+   */
+  deleteRow(data: TData): void {
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return;
+    }
+
+    // Remove from editing set if present
+    this.editingRows.delete(data);
+
+    // Emit the deletion event to parent
+    this.rowDeleted.emit(data);
+
+    // For client-side row model, remove from grid
+    if (!this.useServerSideData && this.rowData) {
+      const rowNode = this.agGrid.api.getRowNode(String(this.rowData.indexOf(data)));
+      if (rowNode) {
+        this.agGrid.api.applyTransaction({ remove: [data] });
+      }
+    }
+  }
+
+  /**
+   * Refresh the grid to update cell renderers
+   */
+  private refreshGrid(): void {
+    if (this.agGrid?.api) {
+      this.agGrid.api.refreshCells({ force: true });
+    }
+  }
+
+  /**
+   * Called when a cell value changes
+   */
+  onCellValueChanged(event: CellValueChangedEvent<TData>): void {
+    if (event.data && event.colDef.field) {
+      this.cellValueChanged.emit({
+        data: event.data,
+        field: event.colDef.field,
+        oldValue: event.oldValue,
+        newValue: event.newValue,
+      });
+    }
   }
 
 }
