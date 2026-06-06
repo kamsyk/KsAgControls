@@ -20,4 +20,26 @@ describe('KsAgGridComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should use light theme mode by default', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('data-ag-theme-mode')).toBe('light');
+  });
+
+  it('should use dark theme mode when darkMode is true', () => {
+    component.darkMode = true;
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark');
+  });
+
+  it('should prefer themeMode over darkMode', () => {
+    component.darkMode = true;
+    component.themeMode = 'dark-blue';
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark-blue');
+  });
 });
