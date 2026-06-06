@@ -72,6 +72,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() class: string | null = null;
   @Input() style: string | null = null;
   @Input() pageSize = 25;
+  @Input() pageSizeOptions: number[] = [10, 25, 50, 100];
   @Input() themeMode: 'light' | 'dark' = 'light';
 
   // Uses Infinite Row Model (AG Grid Community) for server-driven sorting and filtering.
