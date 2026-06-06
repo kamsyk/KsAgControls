@@ -1,15 +1,18 @@
 import {
   Component,
-  HostBinding,
+  EventEmitter,
   Input,
   OnChanges,
   OnInit,
+  Output,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
-import { AgGridModule } from 'ag-grid-angular';
+import { AgGridAngular, AgGridModule } from 'ag-grid-angular';
 import {
   ClientSideRowModelModule,
   ColDef,
+  ColumnState,
   IDatasource,
   IGetRowsParams,
   InfiniteRowModelModule,
@@ -48,8 +51,11 @@ export type KsAgGridServerRowsFetcher<TData = unknown> = (
   | Promise<KsAgGridServerResult<TData>>
   | import('rxjs').Observable<KsAgGridServerResult<TData>>;
 
-/** AG Grid `data-ag-theme-mode` values (see AG Grid theming colours docs). */
-export type KsAgGridThemeMode = 'light' | 'dark' | 'dark-blue' | 'dark-warm';
+export interface KsAgGridState {
+  columnState: ColumnState[];
+  filterModel: Record<string, unknown>;
+  sortModel: unknown;
+}
 
 @Component({
   selector: 'lib-ks-ag-grid',
@@ -57,16 +63,16 @@ export type KsAgGridThemeMode = 'light' | 'dark' | 'dark-blue' | 'dark-warm';
   templateUrl: './ks-ag-grid.component.html',
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
-  host: {
-    class: 'ks-ag-grid',
-  },
 })
 export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
+  @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
+
   @Input() rowData: TData[] | null | undefined = [];
   @Input() columnDefs: ColDef<TData>[] | null = [];
   @Input() class: string | null = null;
   @Input() style: string | null = null;
   @Input() pageSize = 25;
+  @Input() themeMode: 'light' | 'dark' = 'light';
 
   // Uses Infinite Row Model (AG Grid Community) for server-driven sorting and filtering.
   @Input() useServerSideData = false;
@@ -74,15 +80,25 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() serverDataService?: KsAgGridServerDataService<TData>;
   @Input() fetchServerRows?: KsAgGridServerRowsFetcher<TData>;
 
-  /** When true, applies AG Grid's dark colour scheme. Ignored if {@link themeMode} is set. */
-  @Input() darkMode = false;
+  // Settings persistence
+  @Input() enableSettingsPersistence = false;
+  @Input() settingsStorageKey = 'ks-ag-grid-settings';
+  @Input() autoRestoreSettings = true;
 
-  /**
-   * Explicit AG Grid theme mode (`data-ag-theme-mode`). When omitted, derived from {@link darkMode}.
-   */
-  @Input() themeMode?: KsAgGridThemeMode;
+  @Output() settingsSaved = new EventEmitter<KsAgGridState>();
+  @Output() settingsCleared = new EventEmitter<void>();
+  @Output() settingsRestored = new EventEmitter<KsAgGridState>();
 
-  readonly theme: Theme = themeQuartz;
+  private readonly lightTheme: Theme = themeQuartz;
+  private readonly darkTheme: Theme = themeQuartz.withParams({
+    backgroundColor: '#1e1e1e',
+    foregroundColor: '#ffffff',
+    browserColorScheme: 'dark',
+  });
+
+  get theme(): Theme {
+    return this.themeMode === 'dark' ? this.darkTheme : this.lightTheme;
+  }
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
   readonly defaultColDef: ColDef<TData> = {
     flex: 1,
@@ -100,12 +116,8 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   }
 
   get gridClass(): string {
-    return this.class ? `ag-theme-quartz ${this.class}` : 'ag-theme-quartz';
-  }
-
-  @HostBinding('attr.data-ag-theme-mode')
-  get agThemeMode(): KsAgGridThemeMode {
-    return this.themeMode ?? (this.darkMode ? 'dark' : 'light');
+    const themeClass = this.themeMode === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
+    return this.class ? `${themeClass} ${this.class}` : themeClass;
   }
 
   ngOnInit(): void {
@@ -184,6 +196,86 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     }
 
     return Promise.resolve(response);
+  }
+
+  /**
+   * Save current grid settings to localStorage
+   */
+  saveSettings(): void {
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return;
+    }
+
+    const state: KsAgGridState = {
+      columnState: this.agGrid.api.getColumnState() ?? [],
+      filterModel: this.agGrid.api.getFilterModel() ?? {},
+      sortModel: this.agGrid.api.getColumnState()
+        ?.filter((col: ColumnState) => col.sort != null)
+        .map((col: ColumnState) => ({ colId: col.colId, sort: col.sort, sortIndex: col.sortIndex })) ?? [],
+    };
+
+    try {
+      localStorage.setItem(this.settingsStorageKey, JSON.stringify(state));
+      this.settingsSaved.emit(state);
+    } catch (error) {
+      console.error('Failed to save grid settings:', error);
+    }
+  }
+
+  /**
+   * Clear saved grid settings from localStorage
+   */
+  clearSettings(): void {
+    try {
+      localStorage.removeItem(this.settingsStorageKey);
+      this.settingsCleared.emit();
+    } catch (error) {
+      console.error('Failed to clear grid settings:', error);
+    }
+  }
+
+  /**
+   * Restore grid settings from localStorage
+   */
+  restoreSettings(): boolean {
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return false;
+    }
+
+    try {
+      const savedSettings = localStorage.getItem(this.settingsStorageKey);
+      if (!savedSettings) {
+        return false;
+      }
+
+      const state: KsAgGridState = JSON.parse(savedSettings);
+
+      if (state.columnState) {
+        this.agGrid.api.applyColumnState({ state: state.columnState, applyOrder: true });
+      }
+
+      if (state.filterModel) {
+        this.agGrid.api.setFilterModel(state.filterModel);
+      }
+
+      this.settingsRestored.emit(state);
+      return true;
+    } catch (error) {
+      console.error('Failed to restore grid settings:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Called when grid is ready
+   */
+  onGridReady(): void {
+    if (this.enableSettingsPersistence && this.autoRestoreSettings) {
+      // Defer restoration to ensure grid is fully initialized
+      setTimeout(() => this.restoreSettings(), 0);
+    }
   }
 
 }
