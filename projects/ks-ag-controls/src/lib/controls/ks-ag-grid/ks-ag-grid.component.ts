@@ -393,10 +393,49 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   }
 
   /**
-   * Emit event to parent component to add a new item
+   * Add a new blank item to the grid and open it in edit mode
    */
   addNewItem(): void {
-    this.addItem.emit();
+    if (!this.agGrid?.api) {
+      console.warn('AG Grid API not available');
+      return;
+    }
+
+    // For server-side data, just emit the event - parent should handle it
+    if (this.useServerSideData) {
+      this.addItem.emit();
+      return;
+    }
+
+    // Create a new blank item
+    const newItem = {} as TData;
+
+    // Add to grid using transaction API
+    const result = this.agGrid.api.applyTransaction({ add: [newItem], addIndex: 0 });
+
+    if (result && result.add && result.add.length > 0) {
+      // Enter edit mode for the new row
+      this.enterEditMode(newItem);
+
+      // Scroll to the new row (it's at index 0)
+      this.agGrid.api.ensureIndexVisible(0, 'top');
+
+      // Focus on the first editable cell
+      const firstEditableCol = this.columnDefs?.find(col => col.field && col.editable !== false);
+      if (firstEditableCol && firstEditableCol.field) {
+        // Set focus and start editing
+        setTimeout(() => {
+          this.agGrid.api.setFocusedCell(0, firstEditableCol.field as string);
+          this.agGrid.api.startEditingCell({
+            rowIndex: 0,
+            colKey: firstEditableCol.field as string,
+          });
+        }, 100);
+      }
+
+      // Emit event for parent component awareness
+      this.addItem.emit();
+    }
   }
 
   /**
