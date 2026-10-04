@@ -14,7 +14,6 @@ describe('KsAgGridComponent', () => {
 
     fixture = TestBed.createComponent(KsAgGridComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -22,24 +21,21 @@ describe('KsAgGridComponent', () => {
   });
 
   it('should use light theme mode by default', () => {
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('light');
+    expect(component.gridClass).toBe('ag-theme-quartz');
   });
 
-  it('should use dark theme mode when darkMode is true', () => {
-    component.darkMode = true;
+  it('should use dark theme mode when themeMode is dark', () => {
+    component.themeMode = 'dark';
     fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark');
+    expect(component.gridClass).toBe('ag-theme-quartz-dark');
   });
 
-  it('should prefer themeMode over darkMode', () => {
-    component.darkMode = true;
-    component.themeMode = 'dark-blue';
+  it('should preserve custom grid classes with the selected theme', () => {
+    component.themeMode = 'dark';
+    component.class = 'custom-grid';
     fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark-blue');
+    expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
   });
 });

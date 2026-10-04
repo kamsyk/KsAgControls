@@ -25,10 +25,10 @@
           "defaultConfiguration": "production"
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "projects/ks-ag-controls/tsconfig.spec.json",
-            "polyfills": ["zone.js", "zone.js/testing"]
+            "runner": "vitest"
           }
         },
         "lint": {

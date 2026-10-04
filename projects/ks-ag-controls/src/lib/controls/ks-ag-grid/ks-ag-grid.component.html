@@ -1,7 +1,10 @@
 <div>
   @if (enableSettingsPersistence) {
     <div class="grid-toolbar">
-      <button (click)="saveSettings()">Save Settings</button>
+      <button (click)="saveSettings()">
+        <span class="material-symbols" aria-hidden="true">save</span>
+        Save Settings img
+      </button>
       <button (click)="clearSettings()">Clear Settings</button>
       <button (click)="addNewItem()">Add New Item</button>
     </div>
