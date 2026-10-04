@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../lib";
 
 button.ks-submit-button.mat-mdc-button-base {
   background-color: theme('colors.green.600') !important;

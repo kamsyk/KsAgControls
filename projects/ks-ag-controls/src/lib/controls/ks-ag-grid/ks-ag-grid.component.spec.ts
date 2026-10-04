@@ -14,32 +14,40 @@ describe('KsAgGridComponent', () => {
 
     fixture = TestBed.createComponent(KsAgGridComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the save settings icon from the local SVG pool', () => {
+    fixture.componentRef.setInput('enableSettingsPersistence', true);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const icon = host.querySelector('.grid-toolbar button lib-ks-icon svg');
+    expect(icon?.getAttribute('viewBox')).toBe('0 -960 960 960');
+    expect(icon?.querySelector('path')?.getAttribute('d')).toBeTruthy();
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.getAttribute('focusable')).toBe('false');
+  });
+
   it('should use light theme mode by default', () => {
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('light');
+    expect(component.gridClass).toBe('ag-theme-quartz');
   });
 
-  it('should use dark theme mode when darkMode is true', () => {
-    component.darkMode = true;
+  it('should use dark theme mode when themeMode is dark', () => {
+    component.themeMode = 'dark';
     fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark');
+    expect(component.gridClass).toBe('ag-theme-quartz-dark');
   });
 
-  it('should prefer themeMode over darkMode', () => {
-    component.darkMode = true;
-    component.themeMode = 'dark-blue';
+  it('should preserve custom grid classes with the selected theme', () => {
+    component.themeMode = 'dark';
+    component.class = 'custom-grid';
     fixture.detectChanges();
 
-    const host = fixture.nativeElement as HTMLElement;
-    expect(host.getAttribute('data-ag-theme-mode')).toBe('dark-blue');
+    expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
   });
 });

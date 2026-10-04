@@ -1,8 +1,12 @@
 <div>
   @if (enableSettingsPersistence) {
     <div class="grid-toolbar">
-      <button (click)="saveSettings()">Save Settings</button>
+      <button (click)="saveSettings()">
+        <lib-ks-icon name="save" />
+        Save Settings img
+      </button>
       <button (click)="clearSettings()">Clear Settings</button>
+      <button (click)="addNewItem()">Add New Item</button>
     </div>
   }
 
@@ -14,7 +18,7 @@
           [rowModelType]="rowModelType"
           [rowData]="useServerSideData ? undefined : rowData"
           [datasource]="datasource"
-          [columnDefs]="columnDefs"
+          [columnDefs]="effectiveColumnDefs"
           [defaultColDef]="defaultColDef"
           domLayout="autoHeight"
           [pagination]="true"
@@ -23,6 +27,7 @@
           [cacheBlockSize]="pageSize"
           [animateRows]="true"
           [loading]="loading"
-          (gridReady)="onGridReady()">
+          (gridReady)="onGridReady()"
+          (cellValueChanged)="onCellValueChanged($event)">
         </ag-grid-angular>
 </div>
