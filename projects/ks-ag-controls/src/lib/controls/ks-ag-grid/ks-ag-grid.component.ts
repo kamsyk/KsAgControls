@@ -25,6 +25,7 @@ import {
   ICellRendererParams,
 } from 'ag-grid-community';
 import { firstValueFrom, isObservable } from 'rxjs';
+import { KsIconComponent } from '../ks-icon/ks-icon.component';
 
 export interface KsAgGridServerRequest {
   startRow: number;
@@ -62,7 +63,7 @@ export interface KsAgGridState {
 
 @Component({
   selector: 'lib-ks-ag-grid',
-  imports: [AgGridModule],
+  imports: [AgGridModule, KsIconComponent],
   templateUrl: './ks-ag-grid.component.html',
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,

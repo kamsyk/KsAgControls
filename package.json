@@ -23,7 +23,6 @@
     "@angular/platform-browser-dynamic": "^21.2.25",
     "@angular/router": "^21.2.25",
     "@angular/ssr": "^21.2.24",
-    "@material-symbols/font-400": "^0.47.6",
     "ag-grid-angular": "^35.2.1",
     "ag-grid-community": "^35.2.1",
     "ngx-cookie-service-ssr": "^21.3.1",
@@ -39,14 +38,14 @@
     "@tailwindcss/postcss": "4.3.0",
     "angular-eslint": "^21.4.0",
     "eslint": "^9.33.0",
+    "happy-dom": "^20.8.4",
     "ng-packagr": "^21.2.7",
     "postcss": "^8.5.13",
     "prettier": "^3.6.2",
     "tailwindcss": "4.3.0",
     "typescript": "~5.9.2",
     "typescript-eslint": "8.71.0",
-    "vitest": "^4.0.8",
-    "happy-dom": "^20.8.4"
+    "vitest": "^4.0.8"
   },
   "overrides": {
     "piscina": "5.3.2",

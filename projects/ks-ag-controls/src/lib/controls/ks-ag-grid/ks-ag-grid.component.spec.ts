@@ -20,6 +20,18 @@ describe('KsAgGridComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the save settings icon from the local SVG pool', () => {
+    fixture.componentRef.setInput('enableSettingsPersistence', true);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const icon = host.querySelector('.grid-toolbar button lib-ks-icon svg');
+    expect(icon?.getAttribute('viewBox')).toBe('0 -960 960 960');
+    expect(icon?.querySelector('path')?.getAttribute('d')).toBeTruthy();
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.getAttribute('focusable')).toBe('false');
+  });
+
   it('should use light theme mode by default', () => {
     expect(component.gridClass).toBe('ag-theme-quartz');
   });

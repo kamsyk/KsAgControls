@@ -9,6 +9,11 @@
       "glob": "ks-ag-controls.css",
       "input": "src/styles",
       "output": "styles"
+    },
+    {
+      "glob": "LICENSE",
+      "input": "licenses/material-symbols",
+      "output": "licenses/material-symbols"
     }
   ]
 }

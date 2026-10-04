@@ -42,7 +42,32 @@ If you build only the library entrypoint directly (`ng build ks-ag-controls`), r
 npm run build:lib:styles
 ```
 
+### Grid Toolbar Icons
+
+The library uses a local SVG pool of Google Material Symbols Outlined icons (Apache-2.0).
+Currently the pool includes `save`. The grid renders it as inline SVG, without an icon font,
+asset URLs, CDN requests, or special `font-src` permissions.
+
+Import `KsIconComponent` in a consuming component's `imports`, then use:
+
+```html
+<lib-ks-icon name="save" />
+```
+
+Icons inherit the text color and default to 24px. They are decorative (`aria-hidden="true"`),
+so give icon-only buttons an accessible label. Add additional SVG geometry to
+`src/lib/controls/ks-icon/ks-icons.ts` to extend the local pool.
+
 ### Publishing the Library
+
+For local development, run the workspace's install script with the consuming app's directory:
+
+```bat
+scripts\install-local.bat "D:\path\to\client-app"
+```
+
+This builds the library and styles, packs the current version, and installs that tarball.
+It replaces an existing installation without first uninstalling the library.
 
 Once the project is built, you can publish your library by following these steps:
 
