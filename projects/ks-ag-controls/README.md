@@ -73,6 +73,19 @@ already displayed error. The `KsLoginLanguage` type is exported for typed bindin
 />
 ```
 
+### Sign-up Language
+
+`KsSignUpComponent` accepts the same `language` values as login: `cs` (Czech),
+`en` (English, the default), or `de` (German). Field labels, validation messages,
+and all sign-up buttons update when the input changes. The `KsSignUpLanguage`
+type is exported for typed bindings.
+
+```html
+<lib-ks-sign-up language="cs" />
+```
+
+For dynamic selection, use `[language]="selectedLanguage"`.
+
 ### Publishing the Library
 
 For local development, run the workspace's install script with the consuming app's directory:

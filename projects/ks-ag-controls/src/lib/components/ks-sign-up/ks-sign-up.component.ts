@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import {
   FormGroup,
   Validators,
@@ -7,6 +7,7 @@ import {
 } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
 
 @Component({
   selector: 'lib-ks-sign-up',
@@ -15,6 +16,9 @@ import { MatInputModule } from '@angular/material/input';
   styleUrl: './ks-sign-up.component.scss',
 })
 export class KsSignUpComponent {
+  language = input<KsSignUpLanguage>('en');
+  readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
+
   signUpForm: FormGroup;
 
   private fb = inject(FormBuilder);

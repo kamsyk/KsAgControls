@@ -1,26 +1,26 @@
 <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
   <mat-form-field appearance="fill">
-    <mat-label>Username</mat-label>
+    <mat-label>{{ translations().username }}</mat-label>
     <input matInput formControlName="username" required />
     @if (signUpForm.get("username")?.hasError("required")) {
-      <mat-error>Username is required</mat-error>
+      <mat-error>{{ translations().usernameRequired }}</mat-error>
     }
   </mat-form-field>
   <mat-form-field appearance="fill">
-    <mat-label>Email</mat-label>
+    <mat-label>{{ translations().email }}</mat-label>
     <input matInput formControlName="email" required type="email" />
     @if (signUpForm.get("email")?.hasError("required")) {
-      <mat-error>Email is required</mat-error>
+      <mat-error>{{ translations().emailRequired }}</mat-error>
     }
     @if (signUpForm.get("email")?.hasError("email")) {
-      <mat-error>Invalid email</mat-error>
+      <mat-error>{{ translations().invalidEmail }}</mat-error>
     }
   </mat-form-field>
   <mat-form-field appearance="fill">
-    <mat-label>Password</mat-label>
+    <mat-label>{{ translations().password }}</mat-label>
     <input matInput formControlName="password" required type="password" />
     @if (signUpForm.get("password")?.hasError("required")) {
-      <mat-error>Password is required</mat-error>
+      <mat-error>{{ translations().passwordRequired }}</mat-error>
     }
   </mat-form-field>
   <button
@@ -29,17 +29,17 @@
     type="submit"
     [disabled]="signUpForm.invalid"
   >
-    Sign Up1
+    {{ translations().signUp }}
   </button>
 </form>
 <div style="margin-top: 16px">
   <button mat-stroked-button color="accent" (click)="signInWith('google')">
-    Sign up with Google
+    {{ translations().signUpWithGoogle }}
   </button>
   <button mat-stroked-button color="accent" (click)="signInWith('facebook')">
-    Sign up with Facebook
+    {{ translations().signUpWithFacebook }}
   </button>
   <button mat-stroked-button color="accent" (click)="signInWith('microsoft')">
-    Sign up with Microsoft
+    {{ translations().signUpWithMicrosoft }}
   </button>
 </div>
