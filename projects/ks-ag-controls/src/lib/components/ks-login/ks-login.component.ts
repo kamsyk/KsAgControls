@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input, output } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
+import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
 
 @Component({
   selector: 'lib-ks-login',
@@ -20,11 +21,19 @@ export class KsLoginComponent {
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
+  language = input<KsLoginLanguage>('en');
+
+  readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
   loginSuccess = output<{ username: string }>();
 
   loading = false;
-  error = '';
+  private errorKey = signal<KsLoginError | null>(null);
+
+  get error(): string {
+    const key = this.errorKey();
+    return key ? this.translations()[key] : '';
+  }
 
   form = this.fb.group({
     username: ['', [Validators.required]],
@@ -34,7 +43,7 @@ export class KsLoginComponent {
   submit() {
     if (this.form.invalid) return;
     this.loading = true;
-    this.error = '';
+    this.errorKey.set(null);
     const { username, password } = this.form.value as {
       username: string;
       password: string;
@@ -51,7 +60,7 @@ export class KsLoginComponent {
       .subscribe({
         next: (ok) => {
           this.loading = false;
-          if (ok) {
+          if (ok.success) {
             this.loginSuccess.emit({
               username,
             });
@@ -59,12 +68,12 @@ export class KsLoginComponent {
               window.location.href = this.redirectUrl();
             }
           } else {
-            this.error = 'Invalid credentials';
+            this.errorKey.set('invalidCredentials');
           }
         },
         error: () => {
           this.loading = false;
-          this.error = 'An error occurred during login';
+          this.errorKey.set('loginError');
         },
       });
   }

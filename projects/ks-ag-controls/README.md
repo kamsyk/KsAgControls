@@ -58,6 +58,21 @@ Icons inherit the text color and default to 24px. They are decorative (`aria-hid
 so give icon-only buttons an accessible label. Add additional SVG geometry to
 `src/lib/controls/ks-icon/ks-icons.ts` to extend the local pool.
 
+### Login Language
+
+`KsLoginComponent` accepts a `language` input: `cs` (Czech), `en` (English),
+or `de` (German). It defaults to English when omitted. Labels, the submit button,
+loading text, and login errors update when the input changes, including an
+already displayed error. The `KsLoginLanguage` type is exported for typed bindings.
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/"
+  language="cs"
+/>
+```
+
 ### Publishing the Library
 
 For local development, run the workspace's install script with the consuming app's directory:
