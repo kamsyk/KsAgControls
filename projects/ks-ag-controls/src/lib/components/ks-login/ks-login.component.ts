@@ -1,11 +1,14 @@
-import { Component, DestroyRef, inject, input, output } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
+import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
+import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
 
 @Component({
   selector: 'lib-ks-login',
@@ -17,24 +20,41 @@ export class KsLoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
+  private dialog = inject(MatDialog);
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
+  language = input<KsLoginLanguage>('en');
+
+  readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
   loginSuccess = output<{ username: string }>();
 
   loading = false;
-  error = '';
+  private errorKey = signal<KsLoginError | null>(null);
+
+  get error(): string {
+    const key = this.errorKey();
+    return key ? this.translations()[key] : '';
+  }
 
   form = this.fb.group({
     username: ['', [Validators.required]],
     password: ['', [Validators.required]],
   });
 
+  openSignUp() {
+    const dialogRef = this.dialog.open(KsSignUpComponent, {
+      width: '640px',
+      ariaLabel: this.translations().signUp,
+    });
+    dialogRef.componentRef?.setInput('language', this.language());
+  }
+
   submit() {
     if (this.form.invalid) return;
     this.loading = true;
-    this.error = '';
+    this.errorKey.set(null);
     const { username, password } = this.form.value as {
       username: string;
       password: string;
@@ -51,7 +71,7 @@ export class KsLoginComponent {
       .subscribe({
         next: (ok) => {
           this.loading = false;
-          if (ok) {
+          if (ok.success) {
             this.loginSuccess.emit({
               username,
             });
@@ -59,12 +79,12 @@ export class KsLoginComponent {
               window.location.href = this.redirectUrl();
             }
           } else {
-            this.error = 'Invalid credentials';
+            this.errorKey.set('invalidCredentials');
           }
         },
         error: () => {
           this.loading = false;
-          this.error = 'An error occurred during login';
+          this.errorKey.set('loginError');
         },
       });
   }

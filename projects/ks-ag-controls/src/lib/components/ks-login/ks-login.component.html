@@ -1,8 +1,8 @@
-<h2 mat-dialog-title>Sign in</h2>
+<h2 mat-dialog-title>{{ translations().signIn }}</h2>
 <div mat-dialog-content>
   <form (ngSubmit)="submit()" [formGroup]="form">
     <mat-form-field appearance="outline" class="w-100">
-      <mat-label>User Name / Email</mat-label>
+      <mat-label>{{ translations().username }}</mat-label>
       <input
         matInput
         formControlName="username"
@@ -11,7 +11,7 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="w-100">
-      <mat-label>Password</mat-label>
+      <mat-label>{{ translations().password }}</mat-label>
       <input
         matInput
         type="password"
@@ -26,12 +26,20 @@
 
     <div mat-dialog-actions>
       <lib-ks-button
-        label="Sign in"
+        [label]="loading ? translations().signingIn : translations().signIn"
         variant="flat"
         color="primary"
         [disabled]="loading || form.invalid"
         type="submit"
-      >{{ loading ? "Signing in…" : "Sign in" }}</lib-ks-button>
+      ></lib-ks-button>
+      <lib-ks-button
+        [label]="translations().signUp"
+        variant="stroked"
+        color="primary"
+        [disabled]="loading"
+        type="button"
+        (click)="openSignUp()"
+      ></lib-ks-button>
     </div>
   </form>
 </div>

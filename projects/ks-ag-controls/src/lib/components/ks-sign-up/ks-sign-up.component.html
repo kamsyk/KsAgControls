@@ -1,45 +1,46 @@
-<form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
-  <mat-form-field appearance="fill">
-    <mat-label>Username</mat-label>
-    <input matInput formControlName="username" required />
+<h2 class="sign-up-title">{{ translations().signUp }}</h2>
+<form class="sign-up-form" [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
+  <mat-form-field appearance="outline">
+    <mat-label>{{ translations().username }}</mat-label>
+    <input matInput formControlName="username" autocomplete="username" required />
     @if (signUpForm.get("username")?.hasError("required")) {
-      <mat-error>Username is required</mat-error>
+      <mat-error>{{ translations().usernameRequired }}</mat-error>
     }
   </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Email</mat-label>
-    <input matInput formControlName="email" required type="email" />
+  <mat-form-field appearance="outline">
+    <mat-label>{{ translations().email }}</mat-label>
+    <input matInput formControlName="email" autocomplete="email" required type="email" />
     @if (signUpForm.get("email")?.hasError("required")) {
-      <mat-error>Email is required</mat-error>
+      <mat-error>{{ translations().emailRequired }}</mat-error>
     }
     @if (signUpForm.get("email")?.hasError("email")) {
-      <mat-error>Invalid email</mat-error>
+      <mat-error>{{ translations().invalidEmail }}</mat-error>
     }
   </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Password</mat-label>
-    <input matInput formControlName="password" required type="password" />
+  <mat-form-field appearance="outline">
+    <mat-label>{{ translations().password }}</mat-label>
+    <input matInput formControlName="password" autocomplete="new-password" required type="password" />
     @if (signUpForm.get("password")?.hasError("required")) {
-      <mat-error>Password is required</mat-error>
+      <mat-error>{{ translations().passwordRequired }}</mat-error>
     }
   </mat-form-field>
   <button
-    mat-raised-button
+    mat-flat-button
     color="primary"
     type="submit"
     [disabled]="signUpForm.invalid"
   >
-    Sign Up1
+    {{ translations().signUp }}
   </button>
 </form>
-<div style="margin-top: 16px">
-  <button mat-stroked-button color="accent" (click)="signInWith('google')">
-    Sign up with Google
+<div class="sign-up-providers">
+  <button mat-stroked-button type="button" (click)="signInWith('google')">
+    {{ translations().signUpWithGoogle }}
   </button>
-  <button mat-stroked-button color="accent" (click)="signInWith('facebook')">
-    Sign up with Facebook
+  <button mat-stroked-button type="button" (click)="signInWith('facebook')">
+    {{ translations().signUpWithFacebook }}
   </button>
-  <button mat-stroked-button color="accent" (click)="signInWith('microsoft')">
-    Sign up with Microsoft
+  <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
+    {{ translations().signUpWithMicrosoft }}
   </button>
 </div>
