@@ -7,11 +7,12 @@ import {
 } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
 
 @Component({
   selector: 'lib-ks-sign-up',
-  imports: [MatInputModule, MatFormFieldModule, ReactiveFormsModule],
+  imports: [MatInputModule, MatFormFieldModule, MatButtonModule, ReactiveFormsModule],
   templateUrl: './ks-sign-up.component.html',
   styleUrl: './ks-sign-up.component.scss',
 })

@@ -5,7 +5,9 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
+import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
 
 @Component({
@@ -18,6 +20,7 @@ export class KsLoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
+  private dialog = inject(MatDialog);
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
@@ -39,6 +42,13 @@ export class KsLoginComponent {
     username: ['', [Validators.required]],
     password: ['', [Validators.required]],
   });
+
+  openSignUp() {
+    const dialogRef = this.dialog.open(KsSignUpComponent, {
+      ariaLabel: this.translations().signUp,
+    });
+    dialogRef.componentRef?.setInput('language', this.language());
+  }
 
   submit() {
     if (this.form.invalid) return;

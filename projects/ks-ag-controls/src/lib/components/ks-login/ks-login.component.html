@@ -32,6 +32,14 @@
         [disabled]="loading || form.invalid"
         type="submit"
       ></lib-ks-button>
+      <lib-ks-button
+        [label]="translations().signUp"
+        variant="stroked"
+        color="primary"
+        [disabled]="loading"
+        type="button"
+        (click)="openSignUp()"
+      ></lib-ks-button>
     </div>
   </form>
 </div>

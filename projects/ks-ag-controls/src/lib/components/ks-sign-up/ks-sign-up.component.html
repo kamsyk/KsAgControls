@@ -1,14 +1,15 @@
-<form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
-  <mat-form-field appearance="fill">
+<h2 class="sign-up-title">{{ translations().signUp }}</h2>
+<form class="sign-up-form" [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
+  <mat-form-field appearance="outline">
     <mat-label>{{ translations().username }}</mat-label>
-    <input matInput formControlName="username" required />
+    <input matInput formControlName="username" autocomplete="username" required />
     @if (signUpForm.get("username")?.hasError("required")) {
       <mat-error>{{ translations().usernameRequired }}</mat-error>
     }
   </mat-form-field>
-  <mat-form-field appearance="fill">
+  <mat-form-field appearance="outline">
     <mat-label>{{ translations().email }}</mat-label>
-    <input matInput formControlName="email" required type="email" />
+    <input matInput formControlName="email" autocomplete="email" required type="email" />
     @if (signUpForm.get("email")?.hasError("required")) {
       <mat-error>{{ translations().emailRequired }}</mat-error>
     }
@@ -16,15 +17,15 @@
       <mat-error>{{ translations().invalidEmail }}</mat-error>
     }
   </mat-form-field>
-  <mat-form-field appearance="fill">
+  <mat-form-field appearance="outline">
     <mat-label>{{ translations().password }}</mat-label>
-    <input matInput formControlName="password" required type="password" />
+    <input matInput formControlName="password" autocomplete="new-password" required type="password" />
     @if (signUpForm.get("password")?.hasError("required")) {
       <mat-error>{{ translations().passwordRequired }}</mat-error>
     }
   </mat-form-field>
   <button
-    mat-raised-button
+    mat-flat-button
     color="primary"
     type="submit"
     [disabled]="signUpForm.invalid"
@@ -32,14 +33,14 @@
     {{ translations().signUp }}
   </button>
 </form>
-<div style="margin-top: 16px">
-  <button mat-stroked-button color="accent" (click)="signInWith('google')">
+<div class="sign-up-providers">
+  <button mat-stroked-button type="button" (click)="signInWith('google')">
     {{ translations().signUpWithGoogle }}
   </button>
-  <button mat-stroked-button color="accent" (click)="signInWith('facebook')">
+  <button mat-stroked-button type="button" (click)="signInWith('facebook')">
     {{ translations().signUpWithFacebook }}
   </button>
-  <button mat-stroked-button color="accent" (click)="signInWith('microsoft')">
+  <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
     {{ translations().signUpWithMicrosoft }}
   </button>
 </div>

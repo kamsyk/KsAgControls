@@ -1,57 +1,47 @@
 :host {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 468px;
+  margin-inline: auto;
+  padding: 24px;
+  color: var(--mat-sys-on-surface, inherit);
 }
 
-/* Card-like form container */
-form {
+.sign-up-title {
+  margin: 0 0 24px;
+  font: var(--mat-sys-headline-small, 400 24px / 32px Roboto, sans-serif);
+}
+
+.sign-up-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-
-  max-width: 420px;
-  margin: 16px auto 0;
-  padding: 16px;
-
-  border-radius: 12px;
-  background: var(--mat-sys-surface, #fff);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  gap: 8px;
 }
 
-/* Full-width form fields */
 mat-form-field {
   width: 100%;
 }
 
-/* Primary submit button */
-button[mat-raised-button][type="submit"] {
-  margin-top: 4px;
+button {
   width: 100%;
+  min-height: 48px;
+  height: auto;
+  padding-block: 12px;
+  white-space: normal;
 }
 
-/* Social buttons container (the div right after the form) */
-form + div {
-  margin: 16px auto 0;
+.sign-up-providers {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: 420px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--mat-sys-outline-variant, #c4c7c5);
 }
 
-/* Social buttons sizing */
-form + div > button {
-  flex: 1 1 30%;
-  min-width: 180px;
-}
-
-/* Mobile tweaks */
 @media (max-width: 480px) {
-  form {
-    padding: 12px;
-  }
-
-  form + div > button,
-  button[mat-raised-button][type="submit"] {
-    width: 100%;
+  :host {
+    padding: 16px;
   }
 }

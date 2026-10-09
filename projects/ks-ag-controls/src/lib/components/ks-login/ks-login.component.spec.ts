@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, Subject, throwError } from 'rxjs';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
 
 import { KsLoginComponent } from './ks-login.component';
 import { AuthService, LoginResponse } from '../../services/auth.service';
 import { KsLoginLanguage } from './ks-login.translations';
+import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 
 describe('KsLoginComponent', () => {
   let component: KsLoginComponent;
@@ -28,6 +30,10 @@ describe('KsLoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+  });
+
   it('defaults to English', () => {
     expect(component.language()).toBe('en');
     expect(fixture.nativeElement.querySelector('h2').textContent).toBe('Sign in');
@@ -38,6 +44,7 @@ describe('KsLoginComponent', () => {
   const languages: {
     language: KsLoginLanguage;
     signIn: string;
+    signUp: string;
     username: string;
     password: string;
     signingIn: string;
@@ -47,6 +54,7 @@ describe('KsLoginComponent', () => {
     {
       language: 'cs',
       signIn: 'Přihlásit se',
+      signUp: 'Registrovat se',
       username: 'Uživatelské jméno / E-mail',
       password: 'Heslo',
       signingIn: 'Přihlašování…',
@@ -56,6 +64,7 @@ describe('KsLoginComponent', () => {
     {
       language: 'en',
       signIn: 'Sign in',
+      signUp: 'Sign up',
       username: 'User Name / Email',
       password: 'Password',
       signingIn: 'Signing in…',
@@ -65,6 +74,7 @@ describe('KsLoginComponent', () => {
     {
       language: 'de',
       signIn: 'Anmelden',
+      signUp: 'Registrieren',
       username: 'Benutzername / E-Mail',
       password: 'Passwort',
       signingIn: 'Anmeldung läuft…',
@@ -74,6 +84,35 @@ describe('KsLoginComponent', () => {
   ];
 
   for (const text of languages) {
+    it(`opens sign-up in ${text.language} without submitting login`, async () => {
+      fixture.componentRef.setInput('language', text.language);
+      fixture.detectChanges();
+      const button: HTMLButtonElement =
+        fixture.nativeElement.querySelector('button[type="button"]');
+      expect(button.textContent).toBe(text.signUp);
+      expect(button.disabled).toBe(false);
+
+      button.click();
+      fixture.detectChanges();
+
+      const dialogs = TestBed.inject(MatDialog).openDialogs;
+      expect(dialogs).toHaveLength(1);
+      expect(dialogs[0].componentInstance).toBeInstanceOf(KsSignUpComponent);
+      expect(dialogs[0].componentInstance.language()).toBe(text.language);
+      expect(document.querySelector('mat-dialog-container')?.getAttribute('aria-label'))
+        .toBe(text.signUp);
+      expect(document.querySelector('lib-ks-sign-up button[type="submit"]')?.textContent?.trim())
+        .toBe(dialogs[0].componentInstance.translations().signUp);
+      expect(login).not.toHaveBeenCalled();
+
+      const closed = firstValueFrom(dialogs[0].afterClosed());
+      dialogs[0].close();
+      await closed;
+      fixture.detectChanges();
+      expect(TestBed.inject(MatDialog).openDialogs).toHaveLength(0);
+      expect(component.form.value).toEqual({ username: '', password: '' });
+    });
+
     it(`translates labels, loading, and failed credentials in ${text.language}`, () => {
       fixture.componentRef.setInput('language', text.language);
       fixture.detectChanges();
@@ -100,6 +139,7 @@ describe('KsLoginComponent', () => {
       );
       expect(button.textContent).toBe(text.signingIn);
       expect(button.disabled).toBe(true);
+      expect(fixture.nativeElement.querySelector('button[type="button"]').disabled).toBe(true);
 
       response.next({ success: false, message: 'Login failed' });
       response.complete();
@@ -109,6 +149,7 @@ describe('KsLoginComponent', () => {
       expect(fixture.nativeElement.textContent).toContain(text.invalidCredentials);
       expect(button.textContent).toBe(text.signIn);
       expect(button.disabled).toBe(false);
+      expect(fixture.nativeElement.querySelector('button[type="button"]').disabled).toBe(false);
       expect(success).not.toHaveBeenCalled();
     });
 

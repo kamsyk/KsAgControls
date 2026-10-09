@@ -65,6 +65,12 @@ or `de` (German). It defaults to English when omitted. Labels, the submit button
 loading text, and login errors update when the input changes, including an
 already displayed error. The `KsLoginLanguage` type is exported for typed bindings.
 
+The Sign up button opens `KsSignUpComponent` in a Material dialog with the
+currently selected login language. It is available even when the login form is
+empty and disabled while login is in progress. Closing the dialog leaves the
+login form unchanged. The registration component currently contains placeholder
+submission and OAuth handlers; opening it does not configure a registration API.
+
 ```html
 <lib-ks-login
   loginUrl="/api/auth/login"
@@ -85,6 +91,11 @@ type is exported for typed bindings.
 ```
 
 For dynamic selection, use `[language]="selectedLanguage"`.
+
+The sign-up form uses outlined Angular Material fields and themed Material
+buttons in a responsive, single-column layout. It includes a localized heading
+and a separate section for provider buttons, and can be used inline or in the
+login component's dialog. The consuming app must provide an Angular Material theme.
 
 ### Publishing the Library
 

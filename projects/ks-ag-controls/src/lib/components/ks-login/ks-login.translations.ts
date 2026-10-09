@@ -2,6 +2,7 @@ export type KsLoginLanguage = 'cs' | 'en' | 'de';
 
 export interface KsLoginTranslations {
   signIn: string;
+  signUp: string;
   username: string;
   password: string;
   signingIn: string;
@@ -14,6 +15,7 @@ export type KsLoginError = 'invalidCredentials' | 'loginError';
 export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations> = {
   cs: {
     signIn: 'Přihlásit se',
+    signUp: 'Registrovat se',
     username: 'Uživatelské jméno / E-mail',
     password: 'Heslo',
     signingIn: 'Přihlašování…',
@@ -22,6 +24,7 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
   },
   en: {
     signIn: 'Sign in',
+    signUp: 'Sign up',
     username: 'User Name / Email',
     password: 'Password',
     signingIn: 'Signing in…',
@@ -30,6 +33,7 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
   },
   de: {
     signIn: 'Anmelden',
+    signUp: 'Registrieren',
     username: 'Benutzername / E-Mail',
     password: 'Passwort',
     signingIn: 'Anmeldung läuft…',

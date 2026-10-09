@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { KsSignUpComponent } from './ks-sign-up.component';
 import { KsSignUpLanguage } from './ks-sign-up.translations';
+import { MatButton } from '@angular/material/button';
+import { MatFormField } from '@angular/material/form-field';
+import { By } from '@angular/platform-browser';
 
 describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
@@ -25,6 +28,18 @@ describe('KsSignUpComponent', () => {
     expect(component.language()).toBe('en');
     expect(fixture.nativeElement.querySelector('button[type="submit"]').textContent.trim())
       .toBe('Sign Up');
+  });
+
+  it('uses outlined Material fields and styled Material buttons', () => {
+    const fields = fixture.debugElement.queryAll(By.directive(MatFormField));
+    expect(fields).toHaveLength(3);
+    fields.forEach((field) => {
+      expect(field.injector.get(MatFormField).appearance).toBe('outline');
+    });
+    expect(fixture.debugElement.queryAll(By.directive(MatButton))).toHaveLength(4);
+    expect(fixture.nativeElement.querySelector('h2').textContent).toBe('Sign Up');
+    expect(fixture.nativeElement.querySelector('input[formControlName="password"]').autocomplete)
+      .toBe('new-password');
   });
 
   const languages: {
@@ -92,6 +107,7 @@ describe('KsSignUpComponent', () => {
       fixture.detectChanges();
 
       expect(texts('mat-label')).toEqual(text.labels);
+      expect(texts('h2')).toEqual([text.buttons[0]]);
       expect(texts('button')).toEqual(text.buttons);
       expect(texts('mat-error')).toEqual(text.requiredErrors);
 
