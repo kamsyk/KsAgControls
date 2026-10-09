@@ -45,6 +45,7 @@ export class KsLoginComponent {
 
   openSignUp() {
     const dialogRef = this.dialog.open(KsSignUpComponent, {
+      width: '640px',
       ariaLabel: this.translations().signUp,
     });
     dialogRef.componentRef?.setInput('language', this.language());
