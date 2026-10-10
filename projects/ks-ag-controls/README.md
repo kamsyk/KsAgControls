@@ -69,7 +69,8 @@ The Sign up button opens `KsSignUpComponent` in a Material dialog with the
 currently selected login language. It is available even when the login form is
 empty and disabled while login is in progress. Closing the dialog leaves the
 login form unchanged. The registration component currently contains placeholder
-submission and OAuth handlers; opening it does not configure a registration API.
+password submission, Facebook, and Microsoft handlers; opening it does not
+configure a registration API.
 
 ```html
 <lib-ks-login
@@ -96,6 +97,48 @@ The sign-up form uses outlined Angular Material fields and themed Material
 buttons in a responsive, single-column layout. It includes a localized heading
 and a separate section for provider buttons, and can be used inline or in the
 login component's dialog. The consuming app must provide an Angular Material theme.
+
+### Google Authentication (Backend Redirect)
+
+Both `KsLoginComponent` and `KsSignUpComponent` accept:
+
+| Input | Default | Purpose |
+| --- | --- | --- |
+| `googleAuthUrl` | `''` | Backend endpoint that initiates Google authentication. Accepts a relative URL or an absolute HTTP(S) URL without embedded credentials. Use HTTPS in production. |
+| `googleReturnUrl` | `''` | Optional application destination after authentication, sent as the `returnUrl` query parameter. If empty, the endpoint's existing query/default is left unchanged. This is not Google's OAuth callback URL. |
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/"
+  googleAuthUrl="https://localhost:7107/api/auth/google"
+  googleReturnUrl="/dashboard"
+/>
+
+<lib-ks-sign-up
+  googleAuthUrl="https://localhost:7107/api/auth/google"
+  googleReturnUrl="/dashboard"
+/>
+```
+
+Login passes both Google inputs into its sign-up dialog. Without `googleAuthUrl`,
+login hides its Google button and sign-up disables its existing Google button.
+Google authentication does not require valid username/password fields.
+Configuration/navigation failures are logged and displayed in the selected language.
+
+The endpoint must accept `returnUrl`, challenge Google, handle Google's callback,
+find/create the application user, issue the application session cookie, and
+redirect back to an allowlisted destination. Configure the Google **client ID**,
+**client secret**, **callback URL**, and **scopes** on the backend, not as component
+inputs. Let the backend middleware manage OAuth state/correlation and token
+validation; never send secrets or generate OAuth state in these controls.
+Register the backend callback in Google Cloud Console, configure consent/test users,
+and define safe account creation/linking rules.
+
+After returning, the consuming application must refresh its authentication state
+through its backend (for example, `/auth/check` and `/auth/me`). Starting a redirect
+does not emit `loginSuccess`. Cross-origin APIs also require appropriate cookie,
+CORS, and credentialed-request configuration. No Google browser SDK is required.
 
 ### Publishing the Library
 

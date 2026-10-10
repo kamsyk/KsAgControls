@@ -42,4 +42,14 @@
       ></lib-ks-button>
     </div>
   </form>
+  @if (googleAuthUrl()) {
+    <lib-ks-button
+      [label]="translations().signInWithGoogle"
+      variant="stroked"
+      color="primary"
+      type="button"
+      [disabled]="loading"
+      (click)="signInWithGoogle()"
+    ></lib-ks-button>
+  }
 </div>

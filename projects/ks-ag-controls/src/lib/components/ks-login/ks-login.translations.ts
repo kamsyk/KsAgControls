@@ -8,9 +8,11 @@ export interface KsLoginTranslations {
   signingIn: string;
   invalidCredentials: string;
   loginError: string;
+  signInWithGoogle: string;
+  googleAuthError: string;
 }
 
-export type KsLoginError = 'invalidCredentials' | 'loginError';
+export type KsLoginError = 'invalidCredentials' | 'loginError' | 'googleAuthError';
 
 export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations> = {
   cs: {
@@ -21,6 +23,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signingIn: 'Přihlašování…',
     invalidCredentials: 'Neplatné přihlašovací údaje',
     loginError: 'Při přihlašování došlo k chybě',
+    signInWithGoogle: 'Přihlásit se přes Google',
+    googleAuthError: 'Přihlášení přes Google se nepodařilo spustit. Zkontrolujte konfiguraci.',
   },
   en: {
     signIn: 'Sign in',
@@ -30,6 +34,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signingIn: 'Signing in…',
     invalidCredentials: 'Invalid credentials',
     loginError: 'An error occurred during login',
+    signInWithGoogle: 'Sign in with Google',
+    googleAuthError: 'Could not start Google authentication. Check the configuration.',
   },
   de: {
     signIn: 'Anmelden',
@@ -39,5 +45,7 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signingIn: 'Anmeldung läuft…',
     invalidCredentials: 'Ungültige Anmeldedaten',
     loginError: 'Bei der Anmeldung ist ein Fehler aufgetreten',
+    signInWithGoogle: 'Mit Google anmelden',
+    googleAuthError: 'Die Google-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
   },
 };

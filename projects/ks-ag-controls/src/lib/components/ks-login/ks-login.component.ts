@@ -6,6 +6,7 @@ import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { GoogleAuthService } from '../../services/google-auth.service';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
@@ -21,10 +22,13 @@ export class KsLoginComponent {
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
   private dialog = inject(MatDialog);
+  private googleAuth = inject(GoogleAuthService);
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
   language = input<KsLoginLanguage>('en');
+  googleAuthUrl = input('');
+  googleReturnUrl = input('');
 
   readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
@@ -49,6 +53,19 @@ export class KsLoginComponent {
       ariaLabel: this.translations().signUp,
     });
     dialogRef.componentRef?.setInput('language', this.language());
+    dialogRef.componentRef?.setInput('googleAuthUrl', this.googleAuthUrl());
+    dialogRef.componentRef?.setInput('googleReturnUrl', this.googleReturnUrl());
+  }
+
+  signInWithGoogle() {
+    if (this.loading) return;
+    this.errorKey.set(null);
+    try {
+      this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl());
+    } catch (error) {
+      console.error('Could not start Google authentication:', error);
+      this.errorKey.set('googleAuthError');
+    }
   }
 
   submit() {

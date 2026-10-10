@@ -5,14 +5,18 @@ import { KsSignUpLanguage } from './ks-sign-up.translations';
 import { MatButton } from '@angular/material/button';
 import { MatFormField } from '@angular/material/form-field';
 import { By } from '@angular/platform-browser';
+import { GoogleAuthService } from '../../services/google-auth.service';
 
 describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
   let fixture: ComponentFixture<KsSignUpComponent>;
+  const startGoogle = vi.fn();
 
   beforeEach(async () => {
+    startGoogle.mockReset();
     await TestBed.configureTestingModule({
       imports: [KsSignUpComponent],
+      providers: [{ provide: GoogleAuthService, useValue: { start: startGoogle } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(KsSignUpComponent);
@@ -28,6 +32,42 @@ describe('KsSignUpComponent', () => {
     expect(component.language()).toBe('en');
     expect(fixture.nativeElement.querySelector('button[type="submit"]').textContent.trim())
       .toBe('Sign Up');
+  });
+
+  it('requires a configured endpoint, but not a valid form, for Google authentication', () => {
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button[mat-stroked-button]');
+    expect(button.disabled).toBe(true);
+    button.click();
+    expect(startGoogle).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
+    fixture.componentRef.setInput('googleReturnUrl', '/dashboard');
+    fixture.detectChanges();
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(startGoogle).toHaveBeenCalledWith('/api/auth/google', '/dashboard');
+    expect(component.signUpForm.invalid).toBe(true);
+  });
+
+  it('shows localized Google failures and clears them on retry', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      startGoogle.mockImplementationOnce(() => { throw new Error('Invalid URL'); });
+      component.signInWith('google');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe(component.translations().googleAuthError);
+      fixture.componentRef.setInput('language', 'cs');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe(component.translations().googleAuthError);
+      component.signInWith('google');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+      expect(log).toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('uses outlined Material fields and styled Material buttons', () => {
@@ -161,6 +201,7 @@ describe('KsSignUpComponent', () => {
 
   it('preserves OAuth provider actions with translated buttons', () => {
     fixture.componentRef.setInput('language', 'cs');
+    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
     fixture.detectChanges();
     const signInWith = vi.spyOn(component, 'signInWith').mockImplementation(() => undefined);
     try {
