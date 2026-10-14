@@ -104,6 +104,16 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Output() cellValueChanged = new EventEmitter<{ data: TData; field: string; oldValue: unknown; newValue: unknown }>();
 
   private editingRows = new Set<TData>();
+  /** Values captured when a row enters edit mode, so Cancel can discard edits. */
+  private editSnapshots = new Map<TData, Record<string, unknown>>();
+
+  private cachedDefaultColDef?: ColDef<TData>;
+  private cachedDefaultColDefKey?: string;
+  private cachedEffectiveColumnDefs?: ColDef<TData>[];
+  private cachedColumnDefsInput: ColDef<TData>[] | null | undefined;
+  private cachedActionButtons?: boolean;
+  private cachedRowDeletion?: boolean;
+  private readonly emptyColumnDefs: ColDef<TData>[] = [];
 
   private readonly lightTheme: Theme = themeQuartz;
   private readonly darkTheme: Theme = themeQuartz.withParams({
@@ -118,7 +128,13 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
 
   get defaultColDef(): ColDef<TData> {
-    return {
+    const key = `${this.enableActionButtons}:${this.enableEditing}`;
+    if (this.cachedDefaultColDef && this.cachedDefaultColDefKey === key) {
+      return this.cachedDefaultColDef;
+    }
+
+    this.cachedDefaultColDefKey = key;
+    this.cachedDefaultColDef = {
       flex: 1,
       minWidth: 120,
       sortable: true,
@@ -132,10 +148,27 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         return this.enableEditing;
       },
     };
+    return this.cachedDefaultColDef;
   }
 
   get effectiveColumnDefs(): ColDef<TData>[] {
-    if (!this.columnDefs) return [];
+    if (
+      this.cachedEffectiveColumnDefs &&
+      this.cachedColumnDefsInput === this.columnDefs &&
+      this.cachedActionButtons === this.enableActionButtons &&
+      this.cachedRowDeletion === this.enableRowDeletion
+    ) {
+      return this.cachedEffectiveColumnDefs;
+    }
+
+    this.cachedColumnDefsInput = this.columnDefs;
+    this.cachedActionButtons = this.enableActionButtons;
+    this.cachedRowDeletion = this.enableRowDeletion;
+
+    if (!this.columnDefs) {
+      this.cachedEffectiveColumnDefs = this.emptyColumnDefs;
+      return this.cachedEffectiveColumnDefs;
+    }
 
     const columns: ColDef<TData>[] = [...this.columnDefs];
 
@@ -220,6 +253,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       columns.unshift(deleteColumn);
     }
 
+    this.cachedEffectiveColumnDefs = columns;
     return columns;
   }
 
@@ -443,6 +477,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Enter edit mode for a row
    */
   enterEditMode(data: TData): void {
+    this.captureEditSnapshot(data);
     this.editingRows.add(data);
     this.refreshGrid();
   }
@@ -451,16 +486,24 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Save row changes and exit edit mode
    */
   saveRow(data: TData): void {
+    this.editSnapshots.delete(data);
     this.editingRows.delete(data);
     this.rowSaved.emit(data);
     this.refreshGrid();
   }
 
   /**
-   * Cancel editing and exit edit mode
+   * Cancel editing, discard changes made since edit mode started, and exit edit mode.
    */
   cancelEdit(data: TData): void {
+    // Discard the active editor before restoring, so it cannot commit over the snapshot.
+    this.agGrid?.api?.stopEditing(true);
+    this.restoreEditSnapshot(data);
+    this.editSnapshots.delete(data);
     this.editingRows.delete(data);
+    if (!this.useServerSideData && this.agGrid?.api) {
+      this.agGrid.api.applyTransaction({ update: [data] });
+    }
     this.refreshGrid();
   }
 
@@ -475,17 +518,41 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
     // Remove from editing set if present
     this.editingRows.delete(data);
+    this.editSnapshots.delete(data);
 
-    // Emit the deletion event to parent
+    // Emit the deletion event to parent before touching grid state.
+    // Handlers often remove the row from the bound array synchronously, so the
+    // grid removal below must not depend on the row's current array index.
     this.rowDeleted.emit(data);
 
-    // For client-side row model, remove from grid
-    if (!this.useServerSideData && this.rowData) {
-      const rowNode = this.agGrid.api.getRowNode(String(this.rowData.indexOf(data)));
-      if (rowNode) {
-        this.agGrid.api.applyTransaction({ remove: [data] });
+    // Client-side rows are matched by object identity. AG Grid assigns its own
+    // row ids (not the source-array index), so an index lookup skips the removal
+    // whenever the row is missing from rowData or the array was already updated.
+    if (!this.useServerSideData) {
+      this.agGrid.api.applyTransaction({ remove: [data] });
+    }
+  }
+
+  private captureEditSnapshot(data: TData): void {
+    if (!data || typeof data !== 'object' || this.editSnapshots.has(data)) {
+      return;
+    }
+    this.editSnapshots.set(data, { ...(data as Record<string, unknown>) });
+  }
+
+  private restoreEditSnapshot(data: TData): void {
+    const snapshot = this.editSnapshots.get(data);
+    if (!snapshot || !data || typeof data !== 'object') {
+      return;
+    }
+
+    const record = data as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (!Object.prototype.hasOwnProperty.call(snapshot, key)) {
+        delete record[key];
       }
     }
+    Object.assign(record, snapshot);
   }
 
   /**
