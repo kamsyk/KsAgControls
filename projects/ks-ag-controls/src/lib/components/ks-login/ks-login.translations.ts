@@ -10,9 +10,11 @@ export interface KsLoginTranslations {
   loginError: string;
   signInWithGoogle: string;
   googleAuthError: string;
+  signInWithFacebook: string;
+  facebookAuthError: string;
 }
 
-export type KsLoginError = 'invalidCredentials' | 'loginError' | 'googleAuthError';
+export type KsLoginError = 'invalidCredentials' | 'loginError' | 'googleAuthError' | 'facebookAuthError';
 
 export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations> = {
   cs: {
@@ -24,6 +26,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     invalidCredentials: 'Neplatné přihlašovací údaje',
     loginError: 'Při přihlašování došlo k chybě',
     signInWithGoogle: 'Přihlásit se přes Google',
+    signInWithFacebook: 'Přihlásit se přes Facebook',
+    facebookAuthError: 'Přihlášení přes Facebook se nepodařilo spustit. Zkontrolujte konfiguraci.',
     googleAuthError: 'Přihlášení přes Google se nepodařilo spustit. Zkontrolujte konfiguraci.',
   },
   en: {
@@ -35,6 +39,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     invalidCredentials: 'Invalid credentials',
     loginError: 'An error occurred during login',
     signInWithGoogle: 'Sign in with Google',
+    signInWithFacebook: 'Sign in with Facebook',
+    facebookAuthError: 'Could not start Facebook authentication. Check the configuration.',
     googleAuthError: 'Could not start Google authentication. Check the configuration.',
   },
   de: {
@@ -46,6 +52,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     invalidCredentials: 'Ungültige Anmeldedaten',
     loginError: 'Bei der Anmeldung ist ein Fehler aufgetreten',
     signInWithGoogle: 'Mit Google anmelden',
+    signInWithFacebook: 'Mit Facebook anmelden',
+    facebookAuthError: 'Die Facebook-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
     googleAuthError: 'Die Google-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
   },
 };

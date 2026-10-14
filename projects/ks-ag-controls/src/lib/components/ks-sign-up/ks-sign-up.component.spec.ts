@@ -11,12 +11,14 @@ describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
   let fixture: ComponentFixture<KsSignUpComponent>;
   const startGoogle = vi.fn();
+  const startFacebook = vi.fn();
 
   beforeEach(async () => {
     startGoogle.mockReset();
+    startFacebook.mockReset();
     await TestBed.configureTestingModule({
       imports: [KsSignUpComponent],
-      providers: [{ provide: GoogleAuthService, useValue: { start: startGoogle } }],
+      providers: [{ provide: GoogleAuthService, useValue: { start: startGoogle, startProvider: startFacebook } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(KsSignUpComponent);
@@ -65,6 +67,37 @@ describe('KsSignUpComponent', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
       expect(log).toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('requires a Facebook endpoint but not a valid form to start registration', () => {
+    const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button[mat-stroked-button]');
+    const facebook = buttons[1];
+    expect(facebook.disabled).toBe(true);
+    facebook.click();
+    expect(startFacebook).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
+    fixture.componentRef.setInput('facebookReturnUrl', '/advisor');
+    fixture.detectChanges();
+    facebook.click();
+    expect(startFacebook).toHaveBeenCalledWith('/api/auth/facebook/register', '/advisor', 'Facebook');
+    expect(component.signUpForm.invalid).toBe(true);
+  });
+
+  it('shows localized Facebook failures and clears them on retry', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      startFacebook.mockImplementationOnce(() => { throw new Error('Invalid URL'); });
+      component.signInWith('facebook');
+      fixture.componentRef.setInput('language', 'cs');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe(component.translations().facebookAuthError);
+      component.signInWith('facebook');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
     } finally {
       log.mockRestore();
     }
@@ -202,6 +235,7 @@ describe('KsSignUpComponent', () => {
   it('preserves OAuth provider actions with translated buttons', () => {
     fixture.componentRef.setInput('language', 'cs');
     fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
     fixture.detectChanges();
     const signInWith = vi.spyOn(component, 'signInWith').mockImplementation(() => undefined);
     try {

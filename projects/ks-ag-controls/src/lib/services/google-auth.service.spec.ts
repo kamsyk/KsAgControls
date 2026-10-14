@@ -38,6 +38,18 @@ describe('GoogleAuthService', () => {
     expect(assign).toHaveBeenCalledWith('https://app.example.com/auth/google?returnUrl=%2Fhome');
   });
 
+  it('starts Facebook authentication with an encoded return URL', () => {
+    TestBed.inject(GoogleAuthService).startProvider('/auth/facebook/register', '/advisor?question=hello world', 'Facebook');
+    const url = new URL(assign.mock.calls[0][0]);
+    expect(url.pathname).toBe('/auth/facebook/register');
+    expect(url.searchParams.get('returnUrl')).toBe('/advisor?question=hello world');
+  });
+
+  it('rejects an invalid Facebook URL without navigation', () => {
+    expect(() => TestBed.inject(GoogleAuthService).startProvider('javascript:alert(1)', '/', 'Facebook')).toThrow(/Facebook/);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it.each([
     '',
     '   ',

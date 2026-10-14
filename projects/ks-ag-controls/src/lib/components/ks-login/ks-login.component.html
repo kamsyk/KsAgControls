@@ -52,4 +52,14 @@
       (click)="signInWithGoogle()"
     ></lib-ks-button>
   }
+  @if (facebookAuthUrl()) {
+    <lib-ks-button
+      [label]="translations().signInWithFacebook"
+      variant="stroked"
+      color="primary"
+      type="button"
+      [disabled]="loading"
+      (click)="signInWithFacebook()"
+    ></lib-ks-button>
+  }
 </div>

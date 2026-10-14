@@ -13,6 +13,7 @@ export interface KsSignUpTranslations {
   signUpWithFacebook: string;
   signUpWithMicrosoft: string;
   googleAuthError: string;
+  facebookAuthError: string;
 }
 
 export const KS_SIGN_UP_TRANSLATIONS: Record<KsSignUpLanguage, KsSignUpTranslations> = {
@@ -27,6 +28,7 @@ export const KS_SIGN_UP_TRANSLATIONS: Record<KsSignUpLanguage, KsSignUpTranslati
     signUp: 'Zaregistrovat se',
     signUpWithGoogle: 'Zaregistrovat se přes Google',
     signUpWithFacebook: 'Zaregistrovat se přes Facebook',
+    facebookAuthError: 'Přihlášení přes Facebook se nepodařilo spustit. Zkontrolujte konfiguraci.',
     signUpWithMicrosoft: 'Zaregistrovat se přes Microsoft',
     googleAuthError: 'Přihlášení přes Google se nepodařilo spustit. Zkontrolujte konfiguraci.',
   },
@@ -41,6 +43,7 @@ export const KS_SIGN_UP_TRANSLATIONS: Record<KsSignUpLanguage, KsSignUpTranslati
     signUp: 'Sign Up',
     signUpWithGoogle: 'Sign up with Google',
     signUpWithFacebook: 'Sign up with Facebook',
+    facebookAuthError: 'Could not start Facebook authentication. Check the configuration.',
     signUpWithMicrosoft: 'Sign up with Microsoft',
     googleAuthError: 'Could not start Google authentication. Check the configuration.',
   },
@@ -55,6 +58,7 @@ export const KS_SIGN_UP_TRANSLATIONS: Record<KsSignUpLanguage, KsSignUpTranslati
     signUp: 'Registrieren',
     signUpWithGoogle: 'Mit Google registrieren',
     signUpWithFacebook: 'Mit Facebook registrieren',
+    facebookAuthError: 'Die Facebook-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
     signUpWithMicrosoft: 'Mit Microsoft registrieren',
     googleAuthError: 'Die Google-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
   },

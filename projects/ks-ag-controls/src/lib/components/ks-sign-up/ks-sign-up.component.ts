@@ -21,8 +21,11 @@ export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
   googleAuthUrl = input('');
   googleReturnUrl = input('');
+  facebookAuthUrl = input('');
+  facebookReturnUrl = input('');
   readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
   readonly googleAuthFailed = signal(false);
+  readonly facebookAuthFailed = signal(false);
 
   signUpForm: FormGroup;
 
@@ -45,6 +48,8 @@ export class KsSignUpComponent {
   }
 
   signInWith(provider: string) {
+    this.googleAuthFailed.set(false);
+    this.facebookAuthFailed.set(false);
     if (provider === 'google') {
       this.googleAuthFailed.set(false);
       try {
@@ -52,6 +57,15 @@ export class KsSignUpComponent {
       } catch (error) {
         console.error('Could not start Google authentication:', error);
         this.googleAuthFailed.set(true);
+      }
+      return;
+    }
+    if (provider === 'facebook') {
+      try {
+        this.googleAuth.startProvider(this.facebookAuthUrl(), this.facebookReturnUrl(), 'Facebook');
+      } catch (error) {
+        console.error('Could not start Facebook authentication:', error);
+        this.facebookAuthFailed.set(true);
       }
       return;
     }

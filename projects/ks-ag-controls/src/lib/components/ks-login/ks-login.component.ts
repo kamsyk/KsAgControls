@@ -29,6 +29,8 @@ export class KsLoginComponent {
   language = input<KsLoginLanguage>('en');
   googleAuthUrl = input('');
   googleReturnUrl = input('');
+  facebookAuthUrl = input('');
+  facebookReturnUrl = input('');
 
   readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
@@ -55,6 +57,8 @@ export class KsLoginComponent {
     dialogRef.componentRef?.setInput('language', this.language());
     dialogRef.componentRef?.setInput('googleAuthUrl', this.googleAuthUrl());
     dialogRef.componentRef?.setInput('googleReturnUrl', this.googleReturnUrl());
+    dialogRef.componentRef?.setInput('facebookAuthUrl', this.facebookAuthUrl());
+    dialogRef.componentRef?.setInput('facebookReturnUrl', this.facebookReturnUrl());
   }
 
   signInWithGoogle() {
@@ -65,6 +69,17 @@ export class KsLoginComponent {
     } catch (error) {
       console.error('Could not start Google authentication:', error);
       this.errorKey.set('googleAuthError');
+    }
+  }
+
+  signInWithFacebook() {
+    if (this.loading) return;
+    this.errorKey.set(null);
+    try {
+      this.googleAuth.startProvider(this.facebookAuthUrl(), this.facebookReturnUrl(), 'Facebook');
+    } catch (error) {
+      console.error('Could not start Facebook authentication:', error);
+      this.errorKey.set('facebookAuthError');
     }
   }
 
