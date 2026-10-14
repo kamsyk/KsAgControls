@@ -1,9 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AgGridAngular } from 'ag-grid-angular';
 
 import { KsAgGridComponent } from './ks-ag-grid.component';
 
+interface GridRow {
+  id: number;
+  name: string;
+  note?: string;
+}
+
 describe('KsAgGridComponent', () => {
-  let component: KsAgGridComponent;
+  let component: KsAgGridComponent<GridRow>;
   let fixture: ComponentFixture<KsAgGridComponent>;
 
   beforeEach(async () => {
@@ -13,7 +20,7 @@ describe('KsAgGridComponent', () => {
     .compileComponents();
 
     fixture = TestBed.createComponent(KsAgGridComponent);
-    component = fixture.componentInstance;
+    component = fixture.componentInstance as KsAgGridComponent<GridRow>;
   });
 
   it('should create', () => {
@@ -49,5 +56,124 @@ describe('KsAgGridComponent', () => {
     fixture.detectChanges();
 
     expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
+  });
+
+  function mockGridApi() {
+    const api = {
+      applyTransaction: vi.fn(() => ({ add: [], remove: [], update: [] })),
+      getRowNode: vi.fn(() => undefined),
+      refreshCells: vi.fn(),
+      stopEditing: vi.fn(),
+    };
+    component.agGrid = { api } as unknown as AgGridAngular;
+    return api;
+  }
+
+  it('removes a client-side row by identity after the parent already spliced it out', () => {
+    const api = mockGridApi();
+    const first: GridRow = { id: 1, name: 'first' };
+    const second: GridRow = { id: 2, name: 'second' };
+    component.rowData = [first, second];
+    const deleted: GridRow[] = [];
+    component.rowDeleted.subscribe((row) => {
+      deleted.push(row);
+      const index = component.rowData!.indexOf(row);
+      if (index >= 0) {
+        component.rowData!.splice(index, 1);
+      }
+    });
+
+    component.deleteRow(first);
+    component.deleteRow(second);
+
+    expect(deleted).toEqual([first, second]);
+    expect(component.rowData).toEqual([]);
+    expect(api.getRowNode).not.toHaveBeenCalled();
+    expect(api.applyTransaction).toHaveBeenNthCalledWith(1, { remove: [first] });
+    expect(api.applyTransaction).toHaveBeenNthCalledWith(2, { remove: [second] });
+  });
+
+  it('removes a newly added row that is not in the bound rowData array', () => {
+    const api = mockGridApi();
+    const existing: GridRow = { id: 1, name: 'existing' };
+    const added: GridRow = { id: 2, name: 'added' };
+    component.rowData = [existing];
+
+    component.deleteRow(added);
+
+    expect(component.rowData!.indexOf(added)).toBe(-1);
+    expect(api.applyTransaction).toHaveBeenCalledWith({ remove: [added] });
+  });
+
+  it('does not apply a client-side transaction when deleting server-side rows', () => {
+    const api = mockGridApi();
+    const row: GridRow = { id: 1, name: 'remote' };
+    component.rowData = [row];
+    component.useServerSideData = true;
+    const deleted: GridRow[] = [];
+    component.rowDeleted.subscribe((value) => deleted.push(value));
+
+    component.deleteRow(row);
+
+    expect(deleted).toEqual([row]);
+    expect(api.applyTransaction).not.toHaveBeenCalled();
+  });
+
+  it('restores the original row when editing is cancelled and keeps saved edits', () => {
+    const api = mockGridApi();
+    const row: GridRow = { id: 1, name: 'Ada' };
+    const saved: GridRow[] = [];
+    component.rowSaved.subscribe((value) => saved.push(value));
+
+    component.enterEditMode(row);
+    row.name = 'Grace';
+    row.note = 'temporary';
+    component.cancelEdit(row);
+
+    expect(row).toEqual({ id: 1, name: 'Ada' });
+    expect(saved).toEqual([]);
+    expect(api.stopEditing).toHaveBeenCalledWith(true);
+    expect(api.applyTransaction).toHaveBeenCalledWith({ update: [row] });
+
+    component.enterEditMode(row);
+    row.name = 'Grace';
+    component.saveRow(row);
+
+    expect(row.name).toBe('Grace');
+    expect(saved).toEqual([row]);
+  });
+
+  it('does not replace an edit snapshot if edit mode starts again before save or cancel', () => {
+    mockGridApi();
+    const row: GridRow = { id: 1, name: 'Ada' };
+    component.enterEditMode(row);
+    row.name = 'Grace';
+    component.enterEditMode(row);
+    component.cancelEdit(row);
+
+    expect(row.name).toBe('Ada');
+  });
+
+  it('keeps column definition identity stable across change detection', () => {
+    component.columnDefs = [{ field: 'name' }];
+    component.enableActionButtons = true;
+    const first = component.effectiveColumnDefs;
+    const firstDefault = component.defaultColDef;
+
+    expect(component.effectiveColumnDefs).toBe(first);
+    expect(component.defaultColDef).toBe(firstDefault);
+    expect(first[0].headerName).toBe('Actions');
+
+    const row: GridRow = { id: 1, name: 'Ada' };
+    const editable = firstDefault.editable as (params: { data?: unknown }) => boolean;
+    expect(editable({ data: row })).toBe(false);
+    mockGridApi();
+    component.enterEditMode(row);
+    expect(component.effectiveColumnDefs).toBe(first);
+    expect(editable({ data: row })).toBe(true);
+
+    component.columnDefs = [{ field: 'name' }, { field: 'id' }];
+    expect(component.effectiveColumnDefs).not.toBe(first);
+    expect(component.effectiveColumnDefs).toHaveLength(3);
   });
 });
