@@ -47,6 +47,20 @@ export class KsLoginComponent {
   facebookAuthUrl = input('');
   facebookReturnUrl = input('');
 
+  /** Parent-driven light/dark mode. */
+  themeMode = input<KsLoginThemeMode>('light');
+
+  /** Extra CSS class(es) from the parent. */
+  hostClass = input<string | string[] | Set<string> | Record<string, boolean> | null>(null, {
+    alias: 'class',
+  });
+
+  /**
+   * Styles from the parent app (inline CSS + custom properties).
+   * Example: `{ '--ks-login-error': '#ff6b6b', 'padding': '1rem' }`
+   */
+  styles = input<KsLoginStyles | null>(null);
+
   readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
   loginSuccess = output<{ username: string }>();
