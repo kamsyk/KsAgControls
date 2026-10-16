@@ -10,6 +10,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
 
+/** Theme mode controlled by the parent app. */
+export type KsSignUpThemeMode = 'light' | 'dark';
+
 @Component({
   selector: 'lib-ks-sign-up',
   imports: [MatInputModule, MatFormFieldModule, MatButtonModule, ReactiveFormsModule],
@@ -18,6 +21,10 @@ import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translat
 })
 export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
+
+  /** Parent-driven light/dark mode. */
+  themeMode = input<KsSignUpThemeMode>('light');
+
   readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
 
   signUpForm: FormGroup;

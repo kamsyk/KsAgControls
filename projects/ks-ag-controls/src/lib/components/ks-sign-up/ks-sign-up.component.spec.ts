@@ -30,6 +30,13 @@ describe('KsSignUpComponent', () => {
       .toBe('Sign Up');
   });
 
+  it('applies the dark theme class when themeMode is dark', () => {
+    expect(fixture.nativeElement.querySelector('.ks-sign-up--dark')).toBeNull();
+    fixture.componentRef.setInput('themeMode', 'dark');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.ks-sign-up--dark')).not.toBeNull();
+  });
+
   it('uses outlined Material fields and styled Material buttons', () => {
     const fields = fixture.debugElement.queryAll(By.directive(MatFormField));
     expect(fields).toHaveLength(3);
