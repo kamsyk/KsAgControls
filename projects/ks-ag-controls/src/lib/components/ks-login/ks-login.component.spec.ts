@@ -30,6 +30,27 @@ describe('KsLoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('applies light theme by default and dark theme from the parent', () => {
+    const root: HTMLElement = fixture.nativeElement.querySelector('.ks-login');
+    expect(root.classList.contains('ks-login--dark')).toBe(false);
+
+    fixture.componentRef.setInput('themeMode', 'dark');
+    fixture.detectChanges();
+    expect(root.classList.contains('ks-login--dark')).toBe(true);
+  });
+
+  it('applies styles passed from the parent', () => {
+    fixture.componentRef.setInput('styles', {
+      '--ks-login-error': 'rgb(255, 0, 0)',
+      padding: '12px',
+    });
+    fixture.detectChanges();
+
+    const root: HTMLElement = fixture.nativeElement.querySelector('.ks-login');
+    expect(root.style.getPropertyValue('--ks-login-error')).toBe('rgb(255, 0, 0)');
+    expect(root.style.padding).toBe('12px');
+  });
+
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
   });
