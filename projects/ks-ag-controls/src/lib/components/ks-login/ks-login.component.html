@@ -42,4 +42,24 @@
       ></lib-ks-button>
     </div>
   </form>
+  @if (googleAuthUrl()) {
+    <lib-ks-button
+      [label]="translations().signInWithGoogle"
+      variant="stroked"
+      color="primary"
+      type="button"
+      [disabled]="loading"
+      (click)="signInWithGoogle()"
+    ></lib-ks-button>
+  }
+  @if (facebookAuthUrl()) {
+    <lib-ks-button
+      [label]="translations().signInWithFacebook"
+      variant="stroked"
+      color="primary"
+      type="button"
+      [disabled]="loading"
+      (click)="signInWithFacebook()"
+    ></lib-ks-button>
+  }
 </div>
