@@ -7,6 +7,7 @@ import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { GoogleAuthService } from '../../services/google-auth.service';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
@@ -36,24 +37,15 @@ export class KsLoginComponent {
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
   private dialog = inject(MatDialog);
+  private googleAuth = inject(GoogleAuthService);
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
   language = input<KsLoginLanguage>('en');
-
-  /** Parent-driven light/dark mode. */
-  themeMode = input<KsLoginThemeMode>('light');
-
-  /** Extra CSS class(es) from the parent. */
-  hostClass = input<string | string[] | Set<string> | Record<string, boolean> | null>(null, {
-    alias: 'class',
-  });
-
-  /**
-   * Styles from the parent app (inline CSS + custom properties).
-   * Example: `{ '--ks-login-error': '#ff6b6b', 'padding': '1rem' }`
-   */
-  styles = input<KsLoginStyles | null>(null);
+  googleAuthUrl = input('');
+  googleReturnUrl = input('');
+  facebookAuthUrl = input('');
+  facebookReturnUrl = input('');
 
   readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
@@ -79,7 +71,32 @@ export class KsLoginComponent {
       panelClass: this.themeMode() === 'dark' ? 'ks-login-dialog--dark' : undefined,
     });
     dialogRef.componentRef?.setInput('language', this.language());
-    dialogRef.componentRef?.setInput('themeMode', this.themeMode());
+    dialogRef.componentRef?.setInput('googleAuthUrl', this.googleAuthUrl());
+    dialogRef.componentRef?.setInput('googleReturnUrl', this.googleReturnUrl());
+    dialogRef.componentRef?.setInput('facebookAuthUrl', this.facebookAuthUrl());
+    dialogRef.componentRef?.setInput('facebookReturnUrl', this.facebookReturnUrl());
+  }
+
+  signInWithGoogle() {
+    if (this.loading) return;
+    this.errorKey.set(null);
+    try {
+      this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl());
+    } catch (error) {
+      console.error('Could not start Google authentication:', error);
+      this.errorKey.set('googleAuthError');
+    }
+  }
+
+  signInWithFacebook() {
+    if (this.loading) return;
+    this.errorKey.set(null);
+    try {
+      this.googleAuth.startProvider(this.facebookAuthUrl(), this.facebookReturnUrl(), 'Facebook');
+    } catch (error) {
+      console.error('Could not start Facebook authentication:', error);
+      this.errorKey.set('facebookAuthError');
+    }
   }
 
   submit() {

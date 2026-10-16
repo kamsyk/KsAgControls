@@ -104,6 +104,12 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Output() cellValueChanged = new EventEmitter<{ data: TData; field: string; oldValue: unknown; newValue: unknown }>();
 
   private editingRows = new Set<TData>();
+  /** Shallow snapshot taken when a row enters edit mode, restored on cancel. */
+  private originalRowValues = new Map<TData, Record<string, unknown>>();
+  private renderedColumnDefs: ColDef<TData>[] | null = null;
+  private renderedColumnDefsSource: ColDef<TData>[] | null = null;
+  private renderedActions = false;
+  private renderedDeletion = false;
 
   private readonly lightTheme: Theme = themeQuartz;
   private readonly darkTheme: Theme = themeQuartz.withParams({
@@ -117,31 +123,49 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   }
   readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
 
-  get defaultColDef(): ColDef<TData> {
-    return {
-      flex: 1,
-      minWidth: 120,
-      sortable: true,
-      filter: true,
-      resizable: true,
-      editable: (params) => {
-        if (this.enableActionButtons) {
-          // Only editable when row is in edit mode
-          return params.data ? this.editingRows.has(params.data) : false;
-        }
-        return this.enableEditing;
-      },
-    };
-  }
+  // One instance for the life of the component. A getter that returns a new object
+  // makes Angular push defaultColDef into AG Grid on every change detection cycle,
+  // which reapplies flex and drops restored column width, order, and sort.
+  readonly defaultColDef: ColDef<TData> = {
+    flex: 1,
+    minWidth: 120,
+    sortable: true,
+    filter: true,
+    resizable: true,
+    editable: (params) => {
+      if (this.enableActionButtons) {
+        // Only editable when row is in edit mode
+        return params.data ? this.editingRows.has(params.data) : false;
+      }
+      return this.enableEditing;
+    },
+  };
 
   get effectiveColumnDefs(): ColDef<TData>[] {
-    if (!this.columnDefs) return [];
+    const source = this.columnDefs ?? null;
+    if (
+      this.renderedColumnDefs &&
+      this.renderedColumnDefsSource === source &&
+      this.renderedActions === this.enableActionButtons &&
+      this.renderedDeletion === this.enableRowDeletion
+    ) {
+      return this.renderedColumnDefs;
+    }
 
-    const columns: ColDef<TData>[] = [...this.columnDefs];
+    if (!source) {
+      this.renderedColumnDefs = [];
+      this.renderedColumnDefsSource = null;
+      this.renderedActions = this.enableActionButtons;
+      this.renderedDeletion = this.enableRowDeletion;
+      return this.renderedColumnDefs;
+    }
+
+    const columns: ColDef<TData>[] = [...source];
 
     // Add action buttons column (edit/save/delete)
     if (this.enableActionButtons) {
       const actionsColumn = {
+        colId: 'ks-ag-grid-actions',
         headerName: 'Actions',
         width: 180,
         minWidth: 180,
@@ -199,6 +223,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     // Fallback to simple delete button column
     else if (this.enableRowDeletion) {
       const deleteColumn = {
+        colId: 'ks-ag-grid-delete',
         headerName: '',
         width: 70,
         minWidth: 70,
@@ -220,6 +245,10 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       columns.unshift(deleteColumn);
     }
 
+    this.renderedColumnDefs = columns;
+    this.renderedColumnDefsSource = source;
+    this.renderedActions = this.enableActionButtons;
+    this.renderedDeletion = this.enableRowDeletion;
     return columns;
   }
 
@@ -443,6 +472,9 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Enter edit mode for a row
    */
   enterEditMode(data: TData): void {
+    if (data && typeof data === 'object' && !this.originalRowValues.has(data)) {
+      this.originalRowValues.set(data, { ...(data as Record<string, unknown>) });
+    }
     this.editingRows.add(data);
     this.refreshGrid();
   }
@@ -451,7 +483,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Save row changes and exit edit mode
    */
   saveRow(data: TData): void {
+    // Commit an open editor before publishing the row. Clicking Save does not
+    // blur the editor when stopEditingWhenCellsLoseFocus is left at its default.
+    this.agGrid?.api?.stopEditing(false);
     this.editingRows.delete(data);
+    this.originalRowValues.delete(data);
     this.rowSaved.emit(data);
     this.refreshGrid();
   }
@@ -460,7 +496,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Cancel editing and exit edit mode
    */
   cancelEdit(data: TData): void {
+    // Discard the active editor first so it cannot write back over the snapshot.
+    this.agGrid?.api?.stopEditing(true);
+    this.restoreOriginalRow(data);
     this.editingRows.delete(data);
+    this.originalRowValues.delete(data);
     this.refreshGrid();
   }
 
@@ -475,17 +515,32 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
     // Remove from editing set if present
     this.editingRows.delete(data);
+    this.originalRowValues.delete(data);
 
     // Emit the deletion event to parent
     this.rowDeleted.emit(data);
 
-    // For client-side row model, remove from grid
-    if (!this.useServerSideData && this.rowData) {
-      const rowNode = this.agGrid.api.getRowNode(String(this.rowData.indexOf(data)));
-      if (rowNode) {
-        this.agGrid.api.applyTransaction({ remove: [data] });
+    // Client-side row ids are a creation counter, not the rowData index.
+    // Matching on indexOf skips the remove for rows added in-grid and for any
+    // row whose index no longer equals the id AG Grid assigned.
+    if (!this.useServerSideData) {
+      this.agGrid.api.applyTransaction({ remove: [data] });
+    }
+  }
+
+  private restoreOriginalRow(data: TData): void {
+    const original = this.originalRowValues.get(data);
+    if (!original || !data || typeof data !== 'object') {
+      return;
+    }
+
+    const record = data as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (!Object.prototype.hasOwnProperty.call(original, key)) {
+        delete record[key];
       }
     }
+    Object.assign(record, original);
   }
 
   /**

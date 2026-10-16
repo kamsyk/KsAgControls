@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import {
   FormGroup,
   Validators,
@@ -8,6 +8,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { GoogleAuthService } from '../../services/google-auth.service';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
 
 /** Theme mode controlled by the parent app. */
@@ -21,15 +22,18 @@ export type KsSignUpThemeMode = 'light' | 'dark';
 })
 export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
-
-  /** Parent-driven light/dark mode. */
-  themeMode = input<KsSignUpThemeMode>('light');
-
+  googleAuthUrl = input('');
+  googleReturnUrl = input('');
+  facebookAuthUrl = input('');
+  facebookReturnUrl = input('');
   readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
+  readonly googleAuthFailed = signal(false);
+  readonly facebookAuthFailed = signal(false);
 
   signUpForm: FormGroup;
 
   private fb = inject(FormBuilder);
+  private googleAuth = inject(GoogleAuthService);
 
   constructor() {
     this.signUpForm = this.fb.group({
@@ -47,6 +51,27 @@ export class KsSignUpComponent {
   }
 
   signInWith(provider: string) {
+    this.googleAuthFailed.set(false);
+    this.facebookAuthFailed.set(false);
+    if (provider === 'google') {
+      this.googleAuthFailed.set(false);
+      try {
+        this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl());
+      } catch (error) {
+        console.error('Could not start Google authentication:', error);
+        this.googleAuthFailed.set(true);
+      }
+      return;
+    }
+    if (provider === 'facebook') {
+      try {
+        this.googleAuth.startProvider(this.facebookAuthUrl(), this.facebookReturnUrl(), 'Facebook');
+      } catch (error) {
+        console.error('Could not start Facebook authentication:', error);
+        this.facebookAuthFailed.set(true);
+      }
+      return;
+    }
     // Handle OAuth sign-in logic here
     console.log('Sign in with', provider);
   }
