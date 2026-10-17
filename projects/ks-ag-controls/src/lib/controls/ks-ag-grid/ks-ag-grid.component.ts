@@ -170,11 +170,20 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       return this.cachedEffectiveColumnDefs;
     }
 
-    const columns: ColDef<TData>[] = [...this.columnDefs];
+    if (!source) {
+      this.renderedColumnDefs = [];
+      this.renderedColumnDefsSource = null;
+      this.renderedActions = this.enableActionButtons;
+      this.renderedDeletion = this.enableRowDeletion;
+      return this.renderedColumnDefs;
+    }
+
+    const columns: ColDef<TData>[] = [...source];
 
     // Add action buttons column (edit/save/delete)
     if (this.enableActionButtons) {
       const actionsColumn = {
+        colId: 'ks-ag-grid-actions',
         headerName: 'Actions',
         width: 180,
         minWidth: 180,
@@ -232,6 +241,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     // Fallback to simple delete button column
     else if (this.enableRowDeletion) {
       const deleteColumn = {
+        colId: 'ks-ag-grid-delete',
         headerName: '',
         width: 70,
         minWidth: 70,
@@ -488,6 +498,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   saveRow(data: TData): void {
     this.editSnapshots.delete(data);
     this.editingRows.delete(data);
+    this.originalRowValues.delete(data);
     this.rowSaved.emit(data);
     this.refreshGrid();
   }

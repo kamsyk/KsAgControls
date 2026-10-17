@@ -2,6 +2,7 @@ import { Component, computed, DestroyRef, inject, input, output, signal } from '
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
+import { NgClass, NgStyle } from '@angular/common';
 import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
@@ -10,11 +11,25 @@ import { KsButtonComponent } from "../../controls/ks-button/ks-button.component"
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
 
+/** Theme mode controlled by the parent app. */
+export type KsLoginThemeMode = 'light' | 'dark';
+
+/** Inline CSS properties / custom properties passed from the parent app. */
+export type KsLoginStyles = Record<string, string>;
+
 @Component({
   selector: 'lib-ks-login',
-  imports: [MatLabel, MatFormField, MatInputModule, ReactiveFormsModule, KsButtonComponent],
+  imports: [
+    MatLabel,
+    MatFormField,
+    MatInputModule,
+    ReactiveFormsModule,
+    KsButtonComponent,
+    NgClass,
+    NgStyle,
+  ],
   templateUrl: './ks-login.component.html',
-  styleUrl: './ks-login.component.css',
+  styleUrl: './ks-login.component.scss',
 })
 export class KsLoginComponent {
   private fb = inject(FormBuilder);
@@ -25,6 +40,20 @@ export class KsLoginComponent {
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
   language = input<KsLoginLanguage>('en');
+
+  /** Parent-driven light/dark mode. */
+  themeMode = input<KsLoginThemeMode>('light');
+
+  /** Extra CSS class(es) from the parent. */
+  hostClass = input<string | string[] | Set<string> | Record<string, boolean> | null>(null, {
+    alias: 'class',
+  });
+
+  /**
+   * Styles from the parent app (inline CSS + custom properties).
+   * Example: `{ '--ks-login-error': '#ff6b6b', 'padding': '1rem' }`
+   */
+  styles = input<KsLoginStyles | null>(null);
 
   readonly translations = computed(() => KS_LOGIN_TRANSLATIONS[this.language()]);
 
@@ -47,6 +76,7 @@ export class KsLoginComponent {
     const dialogRef = this.dialog.open(KsSignUpComponent, {
       width: '640px',
       ariaLabel: this.translations().signUp,
+      panelClass: this.themeMode() === 'dark' ? 'ks-login-dialog--dark' : undefined,
     });
     dialogRef.componentRef?.setInput('language', this.language());
   }

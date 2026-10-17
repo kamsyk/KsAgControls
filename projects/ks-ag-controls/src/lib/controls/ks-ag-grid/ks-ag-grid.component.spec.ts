@@ -177,3 +177,14 @@ describe('KsAgGridComponent', () => {
     expect(component.effectiveColumnDefs).toHaveLength(3);
   });
 });
+
+function stubGridApi(component: KsAgGridComponent) {
+  const api = {
+    applyTransaction: vi.fn().mockReturnValue({ remove: [{}], add: [], update: [] }),
+    getRowNode: vi.fn().mockReturnValue(undefined),
+    refreshCells: vi.fn(),
+    stopEditing: vi.fn(),
+  };
+  component.agGrid = { api } as unknown as KsAgGridComponent['agGrid'];
+  return api;
+}
