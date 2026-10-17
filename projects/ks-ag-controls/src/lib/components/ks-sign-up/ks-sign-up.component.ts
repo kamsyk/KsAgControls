@@ -11,6 +11,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { GoogleAuthService } from '../../services/google-auth.service';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
 
+/** Theme mode controlled by the parent app. */
+export type KsSignUpThemeMode = 'light' | 'dark';
+
 @Component({
   selector: 'lib-ks-sign-up',
   imports: [MatInputModule, MatFormFieldModule, MatButtonModule, ReactiveFormsModule],

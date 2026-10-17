@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.ks-login {
+  --ks-login-on-surface: var(--mat-sys-on-surface, #1c1b1f);
+  --ks-login-on-surface-variant: var(--mat-sys-on-surface-variant, #49454f);
+  --ks-login-outline: var(--mat-sys-outline-variant, #cac4d0);
+  --ks-login-error: var(--mat-sys-error, #b3261e);
+  --ks-login-surface: var(--mat-sys-surface, #fef7ff);
+
+  box-sizing: border-box;
+  width: 100%;
+  color: var(--ks-login-on-surface);
+  background: var(--ks-login-surface);
+}
+
+.ks-login--dark {
+  --ks-login-on-surface: var(--mat-sys-on-surface, #e6e1e5);
+  --ks-login-on-surface-variant: var(--mat-sys-on-surface-variant, #cac4d0);
+  --ks-login-outline: var(--mat-sys-outline-variant, #49454f);
+  --ks-login-error: var(--mat-sys-error, #f2b8b5);
+  --ks-login-surface: var(--mat-sys-surface, #1c1b1f);
+}
+
+.login-title {
+  margin: 0 0 16px;
+  color: var(--ks-login-on-surface);
+  font: var(--mat-sys-headline-small, 400 24px / 32px Roboto, sans-serif);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.w-100,
+mat-form-field {
+  width: 100%;
+}
+
+.login-error {
+  margin: 0.5rem 0;
+  color: var(--ks-login-error);
+  font: var(--mat-sys-body-medium, 400 14px / 20px Roboto, sans-serif);
+}
+
+.login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 0;
+}
+
+@media (max-width: 640px) {
+  .login-actions {
+    flex-direction: column;
+  }
+
+  .login-actions ::ng-deep lib-ks-button,
+  .login-actions ::ng-deep button {
+    width: 100%;
+  }
+}

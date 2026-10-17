@@ -1,65 +1,73 @@
-<h2 mat-dialog-title>{{ translations().signIn }}</h2>
-<div mat-dialog-content>
-  <form (ngSubmit)="submit()" [formGroup]="form">
-    <mat-form-field appearance="outline" class="w-100">
-      <mat-label>{{ translations().username }}</mat-label>
-      <input
-        matInput
-        formControlName="username"
-        autocomplete="username"
-      />
-    </mat-form-field>
+<div
+  class="ks-login"
+  [class.ks-login--dark]="themeMode() === 'dark'"
+  [ngClass]="hostClass()"
+  [ngStyle]="styles()"
+>
+  <h2 mat-dialog-title class="login-title">{{ translations().signIn }}</h2>
+  <div mat-dialog-content>
+    <form class="login-form" (ngSubmit)="submit()" [formGroup]="form">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>{{ translations().username }}</mat-label>
+        <input
+          matInput
+          formControlName="username"
+          autocomplete="username"
+        />
+      </mat-form-field>
 
-    <mat-form-field appearance="outline" class="w-100">
-      <mat-label>{{ translations().password }}</mat-label>
-      <input
-        matInput
-        type="password"
-        formControlName="password"
-        autocomplete="current-password"
-      />
-    </mat-form-field>
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>{{ translations().password }}</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+        />
+      </mat-form-field>
 
-    @if (error) {
-      <div style="color: #c00; margin: 0.5rem 0">{{ error }}</div>
-    }
+      @if (error) {
+        <div class="login-error" role="alert">{{ error }}</div>
+      }
 
-    <div mat-dialog-actions>
+      <div mat-dialog-actions class="login-actions">
+        <lib-ks-button
+          [label]="loading ? translations().signingIn : translations().signIn"
+          variant="flat"
+          color="primary"
+          [disabled]="loading || form.invalid"
+          type="submit"
+        ></lib-ks-button>
+        <lib-ks-button
+          [label]="translations().signUp"
+          variant="stroked"
+          color="primary"
+          [disabled]="loading"
+          type="button"
+          (click)="openSignUp()"
+        ></lib-ks-button>
+      </div>
+    </form>
+
+    @if (googleAuthUrl()) {
       <lib-ks-button
-        [label]="loading ? translations().signingIn : translations().signIn"
-        variant="flat"
-        color="primary"
-        [disabled]="loading || form.invalid"
-        type="submit"
-      ></lib-ks-button>
-      <lib-ks-button
-        [label]="translations().signUp"
+        [label]="translations().signInWithGoogle"
         variant="stroked"
         color="primary"
-        [disabled]="loading"
         type="button"
-        (click)="openSignUp()"
+        [disabled]="loading"
+        (click)="signInWithGoogle()"
       ></lib-ks-button>
-    </div>
-  </form>
-  @if (googleAuthUrl()) {
-    <lib-ks-button
-      [label]="translations().signInWithGoogle"
-      variant="stroked"
-      color="primary"
-      type="button"
-      [disabled]="loading"
-      (click)="signInWithGoogle()"
-    ></lib-ks-button>
-  }
-  @if (facebookAuthUrl()) {
-    <lib-ks-button
-      [label]="translations().signInWithFacebook"
-      variant="stroked"
-      color="primary"
-      type="button"
-      [disabled]="loading"
-      (click)="signInWithFacebook()"
-    ></lib-ks-button>
-  }
+    }
+    @if (facebookAuthUrl()) {
+      <lib-ks-button
+        [label]="translations().signInWithFacebook"
+        variant="stroked"
+        color="primary"
+        type="button"
+        [disabled]="loading"
+        (click)="signInWithFacebook()"
+      ></lib-ks-button>
+    }
+  </div>
 </div>
