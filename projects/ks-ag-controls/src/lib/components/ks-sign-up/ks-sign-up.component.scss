@@ -4,31 +4,12 @@
   width: 100%;
   max-width: 468px;
   margin-inline: auto;
-}
-
-.ks-sign-up {
-  --ks-sign-up-on-surface: var(--mat-sys-on-surface, #1c1b1f);
-  --ks-sign-up-on-surface-variant: var(--mat-sys-on-surface-variant, #49454f);
-  --ks-sign-up-outline: var(--mat-sys-outline-variant, #c4c7c5);
-  --ks-sign-up-surface: var(--mat-sys-surface, #fef7ff);
-
-  box-sizing: border-box;
-  width: 100%;
   padding: 24px;
-  color: var(--ks-sign-up-on-surface);
-  background: var(--ks-sign-up-surface);
-}
-
-.ks-sign-up--dark {
-  --ks-sign-up-on-surface: var(--mat-sys-on-surface, #e6e1e5);
-  --ks-sign-up-on-surface-variant: var(--mat-sys-on-surface-variant, #cac4d0);
-  --ks-sign-up-outline: var(--mat-sys-outline-variant, #49454f);
-  --ks-sign-up-surface: var(--mat-sys-surface, #1c1b1f);
+  color: var(--mat-sys-on-surface, inherit);
 }
 
 .sign-up-title {
   margin: 0 0 24px;
-  color: var(--ks-sign-up-on-surface);
   font: var(--mat-sys-headline-small, 400 24px / 32px Roboto, sans-serif);
 }
 
@@ -56,11 +37,11 @@ button {
   gap: 12px;
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid var(--ks-sign-up-outline);
+  border-top: 1px solid var(--mat-sys-outline-variant, #c4c7c5);
 }
 
 @media (max-width: 640px) {
-  .ks-sign-up {
+  :host {
     padding: 16px;
   }
 }
