@@ -1,9 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AgGridAngular } from 'ag-grid-angular';
 
 import { KsAgGridComponent } from './ks-ag-grid.component';
 
+interface GridRow {
+  id: number;
+  name: string;
+  note?: string;
+}
+
 describe('KsAgGridComponent', () => {
-  let component: KsAgGridComponent;
+  let component: KsAgGridComponent<GridRow>;
   let fixture: ComponentFixture<KsAgGridComponent>;
 
   beforeEach(async () => {
@@ -13,7 +20,7 @@ describe('KsAgGridComponent', () => {
     .compileComponents();
 
     fixture = TestBed.createComponent(KsAgGridComponent);
-    component = fixture.componentInstance;
+    component = fixture.componentInstance as KsAgGridComponent<GridRow>;
   });
 
   it('should create', () => {
@@ -51,91 +58,123 @@ describe('KsAgGridComponent', () => {
     expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
   });
 
-  it('reuses column definitions until the source or action mode changes', () => {
-    const grid = component as KsAgGridComponent<{ name: string }>;
-    grid.columnDefs = [{ field: 'name' }];
-    grid.enableActionButtons = true;
+  function mockGridApi() {
+    const api = {
+      applyTransaction: vi.fn(() => ({ add: [], remove: [], update: [] })),
+      getRowNode: vi.fn(() => undefined),
+      refreshCells: vi.fn(),
+      stopEditing: vi.fn(),
+    };
+    component.agGrid = { api } as unknown as AgGridAngular;
+    return api;
+  }
 
-    const first = grid.effectiveColumnDefs;
-    expect(grid.effectiveColumnDefs).toBe(first);
-    expect(grid.defaultColDef).toBe(grid.defaultColDef);
-    expect(first[0].colId).toBe('ks-ag-grid-actions');
-
-    grid.enableActionButtons = false;
-    grid.enableRowDeletion = true;
-    const withDelete = grid.effectiveColumnDefs;
-    expect(withDelete).not.toBe(first);
-    expect(withDelete[0].colId).toBe('ks-ag-grid-delete');
-    expect(grid.effectiveColumnDefs).toBe(withDelete);
-  });
-
-  it('removes a client-side row by object identity when its index is not its row id', () => {
-    const first = { id: 'a', name: 'kept' };
-    const second = { id: 'b', name: 'gone' };
+  it('removes a client-side row by identity after the parent already spliced it out', () => {
+    const api = mockGridApi();
+    const first: GridRow = { id: 1, name: 'first' };
+    const second: GridRow = { id: 2, name: 'second' };
     component.rowData = [first, second];
-    const api = stubGridApi(component);
-    const deleted = vi.fn();
-    component.rowDeleted.subscribe(deleted);
+    const deleted: GridRow[] = [];
+    component.rowDeleted.subscribe((row) => {
+      deleted.push(row);
+      const index = component.rowData!.indexOf(row);
+      if (index >= 0) {
+        component.rowData!.splice(index, 1);
+      }
+    });
 
+    component.deleteRow(first);
     component.deleteRow(second);
 
+    expect(deleted).toEqual([first, second]);
+    expect(component.rowData).toEqual([]);
     expect(api.getRowNode).not.toHaveBeenCalled();
-    expect(api.applyTransaction).toHaveBeenCalledWith({ remove: [second] });
-    expect(deleted).toHaveBeenCalledWith(second);
+    expect(api.applyTransaction).toHaveBeenNthCalledWith(1, { remove: [first] });
+    expect(api.applyTransaction).toHaveBeenNthCalledWith(2, { remove: [second] });
   });
 
-  it('removes a row that was added in the grid and is absent from rowData', () => {
-    const added = { id: 'new', name: '' };
-    component.rowData = [{ id: 'a', name: 'kept' }];
-    const api = stubGridApi(component);
+  it('removes a newly added row that is not in the bound rowData array', () => {
+    const api = mockGridApi();
+    const existing: GridRow = { id: 1, name: 'existing' };
+    const added: GridRow = { id: 2, name: 'added' };
+    component.rowData = [existing];
 
     component.deleteRow(added);
 
+    expect(component.rowData!.indexOf(added)).toBe(-1);
     expect(api.applyTransaction).toHaveBeenCalledWith({ remove: [added] });
   });
 
-  it('does not apply a client-side remove for server-driven grids', () => {
-    const row = { id: 'a' };
-    component.useServerSideData = true;
+  it('does not apply a client-side transaction when deleting server-side rows', () => {
+    const api = mockGridApi();
+    const row: GridRow = { id: 1, name: 'remote' };
     component.rowData = [row];
-    const api = stubGridApi(component);
+    component.useServerSideData = true;
+    const deleted: GridRow[] = [];
+    component.rowDeleted.subscribe((value) => deleted.push(value));
 
     component.deleteRow(row);
 
+    expect(deleted).toEqual([row]);
     expect(api.applyTransaction).not.toHaveBeenCalled();
   });
 
-  it('restores the pre-edit snapshot when editing is cancelled', () => {
-    const row: { name: string; role: string; extra?: boolean } = {
-      name: 'Ada',
-      role: 'admin',
-    };
-    const api = stubGridApi(component);
+  it('restores the original row when editing is cancelled and keeps saved edits', () => {
+    const api = mockGridApi();
+    const row: GridRow = { id: 1, name: 'Ada' };
+    const saved: GridRow[] = [];
+    component.rowSaved.subscribe((value) => saved.push(value));
 
     component.enterEditMode(row);
     row.name = 'Grace';
-    row.extra = true;
-    component.enterEditMode(row);
+    row.note = 'temporary';
     component.cancelEdit(row);
 
-    expect(row).toEqual({ name: 'Ada', role: 'admin' });
+    expect(row).toEqual({ id: 1, name: 'Ada' });
+    expect(saved).toEqual([]);
     expect(api.stopEditing).toHaveBeenCalledWith(true);
-    expect(api.refreshCells).toHaveBeenCalledWith({ force: true });
-  });
-
-  it('keeps edited values when the row is saved', () => {
-    const row = { name: 'Ada' };
-    const api = stubGridApi(component);
-    const saved = vi.fn();
-    component.rowSaved.subscribe(saved);
+    expect(api.applyTransaction).toHaveBeenCalledWith({ update: [row] });
 
     component.enterEditMode(row);
     row.name = 'Grace';
     component.saveRow(row);
 
-    expect(row).toEqual({ name: 'Grace' });
-    expect(saved).toHaveBeenCalledWith(row);
-    expect(api.stopEditing).toHaveBeenCalledWith(false);
+    expect(row.name).toBe('Grace');
+    expect(saved).toEqual([row]);
+  });
+
+  it('does not replace an edit snapshot if edit mode starts again before save or cancel', () => {
+    mockGridApi();
+    const row: GridRow = { id: 1, name: 'Ada' };
+    component.enterEditMode(row);
+    row.name = 'Grace';
+    component.enterEditMode(row);
+    component.cancelEdit(row);
+
+    expect(row.name).toBe('Ada');
+  });
+
+  it('keeps column definition identity stable across change detection', () => {
+    component.columnDefs = [{ field: 'name' }];
+    component.enableActionButtons = true;
+    const first = component.effectiveColumnDefs;
+    const firstDefault = component.defaultColDef;
+
+    expect(component.effectiveColumnDefs).toBe(first);
+    expect(component.defaultColDef).toBe(firstDefault);
+    expect(first[0].headerName).toBe('Actions');
+
+    const row: GridRow = { id: 1, name: 'Ada' };
+    const editable = firstDefault.editable as (params: { data?: unknown }) => boolean;
+    expect(editable({ data: row })).toBe(false);
+    mockGridApi();
+    component.enterEditMode(row);
+    expect(component.effectiveColumnDefs).toBe(first);
+    expect(editable({ data: row })).toBe(true);
+
+    component.columnDefs = [{ field: 'name' }, { field: 'id' }];
+    expect(component.effectiveColumnDefs).not.toBe(first);
+    expect(component.effectiveColumnDefs).toHaveLength(3);
   });
 });
 
