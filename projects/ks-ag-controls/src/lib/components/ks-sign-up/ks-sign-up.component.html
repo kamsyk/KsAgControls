@@ -34,21 +34,10 @@
   </button>
 </form>
 <div class="sign-up-providers">
-  @if (googleAuthFailed()) {
-    <p role="alert">{{ translations().googleAuthError }}</p>
-  }
-  @if (facebookAuthFailed()) {
-    <p role="alert">{{ translations().facebookAuthError }}</p>
-  }
-  <button
-    mat-stroked-button
-    type="button"
-    [disabled]="!googleAuthUrl()"
-    (click)="signInWith('google')"
-  >
+  <button mat-stroked-button type="button" (click)="signInWith('google')">
     {{ translations().signUpWithGoogle }}
   </button>
-  <button mat-stroked-button type="button" [disabled]="!facebookAuthUrl()" (click)="signInWith('facebook')">
+  <button mat-stroked-button type="button" (click)="signInWith('facebook')">
     {{ translations().signUpWithFacebook }}
   </button>
   <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
