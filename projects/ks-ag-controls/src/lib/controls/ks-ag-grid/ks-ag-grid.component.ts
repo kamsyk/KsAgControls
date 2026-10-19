@@ -170,15 +170,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       return this.cachedEffectiveColumnDefs;
     }
 
-    if (!source) {
-      this.renderedColumnDefs = [];
-      this.renderedColumnDefsSource = null;
-      this.renderedActions = this.enableActionButtons;
-      this.renderedDeletion = this.enableRowDeletion;
-      return this.renderedColumnDefs;
-    }
-
-    const columns: ColDef<TData>[] = [...source];
+    const columns: ColDef<TData>[] = [...this.columnDefs];
 
     // Add action buttons column (edit/save/delete)
     if (this.enableActionButtons) {
@@ -496,9 +488,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Save row changes and exit edit mode
    */
   saveRow(data: TData): void {
+    // Commit an open editor before publishing the row. Clicking Save does not
+    // blur the editor when stopEditingWhenCellsLoseFocus is left at its default.
+    this.agGrid?.api?.stopEditing(false);
     this.editSnapshots.delete(data);
     this.editingRows.delete(data);
-    this.originalRowValues.delete(data);
     this.rowSaved.emit(data);
     this.refreshGrid();
   }
