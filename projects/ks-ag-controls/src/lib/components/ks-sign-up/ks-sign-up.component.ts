@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import {
   FormGroup,
   Validators,
@@ -10,26 +10,32 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { GoogleAuthService } from '../../services/google-auth.service';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 @Component({
   selector: 'lib-ks-sign-up',
   imports: [MatInputModule, MatFormFieldModule, MatButtonModule, ReactiveFormsModule],
   templateUrl: './ks-sign-up.component.html',
   styleUrl: './ks-sign-up.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.ks-sign-up--dark]': "themeMode() === 'dark'",
   },
 })
 export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
+  providers = input<readonly KsAuthProvider[]>(['google', 'facebook', 'microsoft']);
   themeMode = input<'light' | 'dark'>('light');
   googleAuthUrl = input('');
   googleReturnUrl = input('');
   facebookAuthUrl = input('');
   facebookReturnUrl = input('');
+  microsoftAuthUrl = input('');
+  microsoftReturnUrl = input('');
   readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
   readonly googleAuthFailed = signal(false);
   readonly facebookAuthFailed = signal(false);
+  readonly microsoftAuthFailed = signal(false);
 
   signUpForm: FormGroup;
 
@@ -54,6 +60,7 @@ export class KsSignUpComponent {
   signInWith(provider: string) {
     this.googleAuthFailed.set(false);
     this.facebookAuthFailed.set(false);
+    this.microsoftAuthFailed.set(false);
     if (provider === 'google') {
       try {
         this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl());
@@ -69,6 +76,15 @@ export class KsSignUpComponent {
       } catch (error) {
         console.error('Could not start Facebook authentication:', error);
         this.facebookAuthFailed.set(true);
+      }
+      return;
+    }
+    if (provider === 'microsoft') {
+      try {
+        this.googleAuth.startProvider(this.microsoftAuthUrl(), this.microsoftReturnUrl(), 'Microsoft');
+      } catch (error) {
+        console.error('Could not start Microsoft authentication:', error);
+        this.microsoftAuthFailed.set(true);
       }
       return;
     }

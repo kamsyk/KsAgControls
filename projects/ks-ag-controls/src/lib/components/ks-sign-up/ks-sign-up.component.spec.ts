@@ -6,6 +6,7 @@ import { MatButton } from '@angular/material/button';
 import { MatFormField } from '@angular/material/form-field';
 import { By } from '@angular/platform-browser';
 import { GoogleAuthService } from '../../services/google-auth.service';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
@@ -66,20 +67,21 @@ describe('KsSignUpComponent', () => {
     });
   });
 
-  for (const provider of ['google', 'facebook'] as const) {
+  for (const provider of ['google', 'facebook', 'microsoft'] as const) {
     it(`preserves ${provider} registration and displays failures`, () => {
       const url = `/api/auth/${provider}/register`;
+      const name = { google: 'Google', facebook: 'Facebook', microsoft: 'Microsoft' }[provider];
       fixture.componentRef.setInput(`${provider}AuthUrl`, url);
       fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
       fixture.detectChanges();
       const button: HTMLButtonElement = fixture.nativeElement.querySelectorAll('.sign-up-providers button')[
-        provider === 'google' ? 0 : 1
+        provider === 'google' ? 0 : provider === 'facebook' ? 1 : 2
       ];
       button.click();
       if (provider === 'google') {
         expect(googleAuth.start).toHaveBeenCalledWith(url, '/advisor');
       } else {
-        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', 'Facebook');
+        expect(googleAuth.startProvider).toHaveBeenCalledExactlyOnceWith(url, '/advisor', name);
       }
 
       const start = provider === 'google' ? googleAuth.start : googleAuth.startProvider;
@@ -89,7 +91,7 @@ describe('KsSignUpComponent', () => {
         button.click();
         fixture.detectChanges();
         expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
-          .toContain(component.translations()[`${provider}AuthError`]);
+          .toBe(`Could not start ${name} authentication. Check the configuration.`);
         expect(log).toHaveBeenCalled();
         button.click();
         fixture.detectChanges();
@@ -99,6 +101,83 @@ describe('KsSignUpComponent', () => {
       }
     });
   }
+
+  const providerSelections: KsAuthProvider[][] = [
+    [],
+    ['google'],
+    ['facebook'],
+    ['microsoft'],
+    ['google', 'facebook'],
+    ['google', 'microsoft'],
+    ['facebook', 'microsoft'],
+    ['google', 'facebook', 'microsoft'],
+  ];
+
+  for (const providers of providerSelections) {
+    it(`shows only selected sign-up providers: ${providers.join(', ') || 'none'}`, () => {
+      fixture.componentRef.setInput('providers', providers);
+      fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> =
+        fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+      expect(Array.from(buttons, button => button.textContent?.trim().toLowerCase()))
+        .toEqual(providers.map(provider => `sign up with ${provider}`));
+      expect(fixture.nativeElement.querySelector('.sign-up-providers') !== null)
+        .toBe(providers.length > 0);
+      expect(fixture.nativeElement.querySelector('button[type="submit"]')).not.toBeNull();
+
+      fixture.componentRef.setInput('providers', ['google', 'facebook', 'microsoft']);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.sign-up-providers button')).toHaveLength(3);
+    });
+  }
+
+  it('keeps selected provider buttons disabled until their URLs are configured', () => {
+    fixture.detectChanges();
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+    expect(Array.from(buttons, button => button.disabled)).toEqual([true, true, true]);
+    buttons.forEach(button => button.click());
+    expect(googleAuth.start).not.toHaveBeenCalled();
+    expect(googleAuth.startProvider).not.toHaveBeenCalled();
+
+    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google/register');
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
+    fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft/register');
+    fixture.detectChanges();
+    expect(Array.from(buttons, button => button.disabled)).toEqual([false, false, false]);
+  });
+
+  it('retranslates Microsoft failures and clears them when another provider is started', () => {
+    fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft/register');
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
+    fixture.detectChanges();
+    googleAuth.startProvider.mockImplementationOnce(() => { throw new Error('Navigation failed'); });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const buttons: NodeListOf<HTMLButtonElement> =
+        fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+      buttons[2].click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe('Could not start Microsoft authentication. Check the configuration.');
+
+      fixture.componentRef.setInput('language', 'cs');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe('Přihlášení přes Microsoft se nepodařilo spustit. Zkontrolujte konfiguraci.');
+
+      fixture.componentRef.setInput('language', 'de');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+        .toBe('Die Microsoft-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.');
+
+      buttons[1].click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+      log.mockRestore();
+    }
+  });
 
   const languages: {
     language: KsSignUpLanguage;
@@ -221,6 +300,7 @@ describe('KsSignUpComponent', () => {
     fixture.componentRef.setInput('language', 'cs');
     fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google/register');
     fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
+    fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft/register');
     fixture.detectChanges();
     const signInWith = vi.spyOn(component, 'signInWith').mockImplementation(() => undefined);
     try {

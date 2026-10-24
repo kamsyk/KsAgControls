@@ -69,7 +69,7 @@ The Sign up button opens `KsSignUpComponent` in a Material dialog with the
 currently selected login language. It is available even when the login form is
 empty and disabled while login is in progress. Closing the dialog leaves the
 login form unchanged. The registration component currently contains placeholder
-password submission and Microsoft handlers; opening it does not
+password submission; opening it does not
 configure a registration API.
 
 ```html
@@ -97,6 +97,39 @@ The sign-up form uses outlined Angular Material fields and themed Material
 buttons in a responsive, single-column layout. It includes a localized heading
 and a separate section for provider buttons, and can be used inline or in the
 login component's dialog. The consuming app must provide an Angular Material theme.
+
+### Available Authentication Providers
+
+Both `KsLoginComponent` and `KsSignUpComponent` accept a `providers` input:
+a readonly array of `'google'`, `'facebook'`, and/or `'microsoft'`. The exported
+`KsAuthProvider` type can be used for typed bindings in consuming apps.
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/"
+  [providers]="['google', 'facebook']"
+  googleAuthUrl="/api/auth/google"
+  facebookAuthUrl="/api/auth/facebook"
+/>
+
+<lib-ks-sign-up
+  [providers]="['google']"
+  googleAuthUrl="/api/auth/google/register"
+/>
+```
+
+Omitting `providers` selects all three providers, preserving existing behavior.
+Use `[providers]="[]"` to hide the provider section entirely; username/password
+forms remain available. Unselected provider buttons are hidden, and changing the
+input updates the displayed buttons. Buttons retain the fixed order Google,
+Facebook, Microsoft regardless of array order.
+
+Login forwards its selection to the sign-up dialog when opening it. Selection
+does not configure endpoints or implement authentication: login still requires
+the selected provider's auth URL to show its button, and sign-up disables
+all provider buttons without their URLs. This input controls the UI only; backend
+authentication policies must be enforced by the consuming app.
 
 ### Google Authentication (Backend Redirect)
 
@@ -169,6 +202,36 @@ state validation, and account linking on the backend. No Facebook browser SDK
 or access token is used by these controls. The existing `GoogleAuthService.start`
 API remains compatible; the shared navigation implementation is available as
 `startProvider(url, returnUrl, 'Facebook')`.
+
+### Microsoft Authentication (Backend Redirect)
+
+Both login and, since version 0.0.10, sign-up accept `microsoftAuthUrl` and
+`microsoftReturnUrl` inputs (default `''`) with the same URL validation and
+browser-only navigation rules as Google and Facebook. The optional return URL is
+sent as the `returnUrl` query parameter, not as the OAuth callback URL. Login hides
+its Microsoft button when no URL is configured; sign-up disables its button.
+Both actions work without a valid password form, and navigation failures are
+displayed in Czech, English, and German and cleared on the next provider attempt.
+Login forwards both inputs to its sign-up dialog. When login and registration
+have separate endpoints, configure the dialog's `microsoftAuthUrl` with the
+registration endpoint, as for Google and Facebook.
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/advisor"
+  microsoftAuthUrl="/api/auth/microsoft"
+  microsoftReturnUrl="/advisor"
+/>
+<lib-ks-sign-up
+  microsoftAuthUrl="/api/auth/microsoft/register"
+  microsoftReturnUrl="/advisor"
+/>
+```
+
+Keep the Microsoft Entra ID client ID, client secret, tenant, callback URL, and
+account linking on the backend. The navigation is available as
+`startProvider(url, returnUrl, 'Microsoft')`.
 
 ### Publishing the Library
 
