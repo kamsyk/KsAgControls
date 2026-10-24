@@ -70,21 +70,22 @@ describe('KsLoginComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('button')).toHaveLength(2);
   });
 
-  for (const provider of ['google', 'facebook'] as const) {
+  for (const provider of ['google', 'facebook', 'microsoft'] as const) {
     it(`preserves ${provider} sign-in and reports configuration failures`, () => {
       const url = `/api/auth/${provider}`;
+      const name = { google: 'Google', facebook: 'Facebook', microsoft: 'Microsoft' }[provider];
       fixture.componentRef.setInput(`${provider}AuthUrl`, url);
       fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
       fixture.detectChanges();
       const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-      const button = Array.from(buttons).find(element =>
-        element.textContent?.includes(provider === 'google' ? 'Google' : 'Facebook'));
+      const button = Array.from(buttons).find(element => element.textContent?.includes(name));
       expect(button).toBeDefined();
+      expect(button!.querySelector('svg.provider-icon')).not.toBeNull();
       button!.click();
       if (provider === 'google') {
         expect(googleAuth.start).toHaveBeenCalledWith(url, '/advisor');
       } else {
-        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', 'Facebook');
+        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', name);
       }
       const start = provider === 'google' ? googleAuth.start : googleAuth.startProvider;
       start.mockImplementationOnce(() => { throw new Error('Invalid provider configuration'); });

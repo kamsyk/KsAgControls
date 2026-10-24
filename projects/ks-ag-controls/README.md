@@ -170,6 +170,26 @@ or access token is used by these controls. The existing `GoogleAuthService.start
 API remains compatible; the shared navigation implementation is available as
 `startProvider(url, returnUrl, 'Facebook')`.
 
+### Microsoft Authentication (Backend Redirect)
+
+Login accepts `microsoftAuthUrl` and `microsoftReturnUrl` inputs with the same URL
+validation and browser-only navigation rules as Google and Facebook. Login hides its
+Microsoft button when no URL is configured, and navigation failures are displayed
+in Czech, English, and German.
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/advisor"
+  microsoftAuthUrl="/api/auth/microsoft"
+  microsoftReturnUrl="/advisor"
+/>
+```
+
+Keep the Microsoft Entra ID client ID, client secret, tenant, callback URL, and
+account linking on the backend. The navigation is available as
+`startProvider(url, returnUrl, 'Microsoft')`.
+
 ### Publishing the Library
 
 For local development, run the workspace's install script with the consuming app's directory:

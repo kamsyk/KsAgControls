@@ -48,6 +48,8 @@ export class KsLoginComponent {
   googleReturnUrl = input('');
   facebookAuthUrl = input('');
   facebookReturnUrl = input('');
+  microsoftAuthUrl = input('');
+  microsoftReturnUrl = input('');
 
   /** Parent-driven light/dark mode. */
   themeMode = input<KsLoginThemeMode>('light');
@@ -113,6 +115,17 @@ export class KsLoginComponent {
     } catch (error) {
       console.error('Could not start Facebook authentication:', error);
       this.errorKey.set('facebookAuthError');
+    }
+  }
+
+  signInWithMicrosoft() {
+    if (this.loading) return;
+    this.errorKey.set(null);
+    try {
+      this.googleAuth.startProvider(this.microsoftAuthUrl(), this.microsoftReturnUrl(), 'Microsoft');
+    } catch (error) {
+      console.error('Could not start Microsoft authentication:', error);
+      this.errorKey.set('microsoftAuthError');
     }
   }
 
