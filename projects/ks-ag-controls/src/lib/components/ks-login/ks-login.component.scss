@@ -23,6 +23,17 @@
   --ks-login-outline: var(--mat-sys-outline-variant, #49454f);
   --ks-login-error: var(--mat-sys-error, #f2b8b5);
   --ks-login-surface: var(--mat-sys-surface, #1c1b1f);
+  --mat-form-field-outlined-label-text-color: var(--ks-login-on-surface-variant);
+  --mat-form-field-outlined-hover-label-text-color: var(--ks-login-on-surface);
+  --mat-form-field-outlined-disabled-label-text-color: #938f99;
+  --mat-form-field-outlined-input-text-color: var(--ks-login-on-surface);
+  --mat-form-field-outlined-disabled-input-text-color: #938f99;
+  --mat-form-field-outlined-input-text-placeholder-color: var(--ks-login-on-surface-variant);
+  --mat-form-field-outlined-outline-color: var(--ks-login-outline);
+  --mat-form-field-outlined-hover-outline-color: var(--ks-login-on-surface);
+  --mat-button-outlined-label-text-color: var(--ks-login-on-surface);
+  --mat-button-outlined-disabled-label-text-color: #938f99;
+  --mat-button-filled-disabled-label-text-color: #cac4d0;
 }
 
 .login-title {

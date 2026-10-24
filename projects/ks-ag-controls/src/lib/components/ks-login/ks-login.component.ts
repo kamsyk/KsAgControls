@@ -79,6 +79,7 @@ export class KsLoginComponent {
       panelClass: this.themeMode() === 'dark' ? 'ks-login-dialog--dark' : undefined,
     });
     dialogRef.componentRef?.setInput('language', this.language());
+    dialogRef.componentRef?.setInput('themeMode', this.themeMode());
   }
 
   submit() {

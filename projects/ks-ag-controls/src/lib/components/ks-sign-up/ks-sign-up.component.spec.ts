@@ -24,6 +24,15 @@ describe('KsSignUpComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('applies dark theme styles when requested', () => {
+    const signUp: HTMLElement = fixture.nativeElement;
+    expect(signUp.classList.contains('ks-sign-up--dark')).toBe(false);
+
+    fixture.componentRef.setInput('themeMode', 'dark');
+    fixture.detectChanges();
+    expect(signUp.classList.contains('ks-sign-up--dark')).toBe(true);
+  });
+
   it('defaults to English', () => {
     expect(component.language()).toBe('en');
     expect(fixture.nativeElement.querySelector('button[type="submit"]').textContent.trim())

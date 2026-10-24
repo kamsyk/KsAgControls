@@ -13,6 +13,25 @@
   font: var(--mat-sys-headline-small, 400 24px / 32px Roboto, sans-serif);
 }
 
+:host(.ks-sign-up--dark) {
+  color-scheme: dark;
+  color: #e6e1e5;
+  background-color: #1c1b1f;
+  --mat-sys-on-surface: #e6e1e5;
+  --mat-sys-on-surface-variant: #cac4d0;
+  --mat-form-field-outlined-label-text-color: #cac4d0;
+  --mat-form-field-outlined-hover-label-text-color: #e6e1e5;
+  --mat-form-field-outlined-disabled-label-text-color: #938f99;
+  --mat-form-field-outlined-input-text-color: #e6e1e5;
+  --mat-form-field-outlined-disabled-input-text-color: #938f99;
+  --mat-form-field-outlined-input-text-placeholder-color: #cac4d0;
+  --mat-form-field-outlined-outline-color: #938f99;
+  --mat-form-field-outlined-hover-outline-color: #e6e1e5;
+  --mat-button-outlined-label-text-color: #e6e1e5;
+  --mat-button-outlined-disabled-label-text-color: #938f99;
+  --mat-button-filled-disabled-label-text-color: #cac4d0;
+}
+
 .sign-up-form {
   display: flex;
   flex-direction: column;

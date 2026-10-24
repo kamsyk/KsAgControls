@@ -15,9 +15,13 @@ import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translat
   imports: [MatInputModule, MatFormFieldModule, MatButtonModule, ReactiveFormsModule],
   templateUrl: './ks-sign-up.component.html',
   styleUrl: './ks-sign-up.component.scss',
+  host: {
+    '[class.ks-sign-up--dark]': "themeMode() === 'dark'",
+  },
 })
 export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
+  themeMode = input<'light' | 'dark'>('light');
   readonly translations = computed(() => KS_SIGN_UP_TRANSLATIONS[this.language()]);
 
   signUpForm: FormGroup;
