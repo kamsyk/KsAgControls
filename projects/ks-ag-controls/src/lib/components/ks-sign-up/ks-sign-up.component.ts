@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { GoogleAuthService } from '../../services/google-auth.service';
 import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translations';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 @Component({
   selector: 'lib-ks-sign-up',
@@ -22,6 +23,7 @@ import { KS_SIGN_UP_TRANSLATIONS, KsSignUpLanguage } from './ks-sign-up.translat
 })
 export class KsSignUpComponent {
   language = input<KsSignUpLanguage>('en');
+  providers = input<readonly KsAuthProvider[]>(['google', 'facebook', 'microsoft']);
   themeMode = input<'light' | 'dark'>('light');
   googleAuthUrl = input('');
   googleReturnUrl = input('');

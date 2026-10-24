@@ -98,6 +98,40 @@ buttons in a responsive, single-column layout. It includes a localized heading
 and a separate section for provider buttons, and can be used inline or in the
 login component's dialog. The consuming app must provide an Angular Material theme.
 
+### Available Authentication Providers
+
+Both `KsLoginComponent` and `KsSignUpComponent` accept a `providers` input:
+a readonly array of `'google'`, `'facebook'`, and/or `'microsoft'`. The exported
+`KsAuthProvider` type can be used for typed bindings in consuming apps.
+
+```html
+<lib-ks-login
+  loginUrl="/api/auth/login"
+  redirectUrl="/"
+  [providers]="['google', 'facebook']"
+  googleAuthUrl="/api/auth/google"
+  facebookAuthUrl="/api/auth/facebook"
+/>
+
+<lib-ks-sign-up
+  [providers]="['google']"
+  googleAuthUrl="/api/auth/google/register"
+/>
+```
+
+Omitting `providers` selects all three providers, preserving existing behavior.
+Use `[providers]="[]"` to hide the provider section entirely; username/password
+forms remain available. Unselected provider buttons are hidden, and changing the
+input updates the displayed buttons. Buttons retain the fixed order Google,
+Facebook, Microsoft regardless of array order.
+
+Login forwards its selection to the sign-up dialog when opening it. Selection
+does not configure endpoints or implement authentication: login still requires
+the selected provider's auth URL to show its button, and sign-up still disables
+Google/Facebook buttons without their URLs. The existing Microsoft sign-up
+handler remains a placeholder. This input controls the UI only; backend
+authentication policies must be enforced by the consuming app.
+
 ### Google Authentication (Backend Redirect)
 
 Both `KsLoginComponent` and `KsSignUpComponent` accept:

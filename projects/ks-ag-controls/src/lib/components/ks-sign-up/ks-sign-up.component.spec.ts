@@ -6,6 +6,7 @@ import { MatButton } from '@angular/material/button';
 import { MatFormField } from '@angular/material/form-field';
 import { By } from '@angular/platform-browser';
 import { GoogleAuthService } from '../../services/google-auth.service';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
@@ -99,6 +100,48 @@ describe('KsSignUpComponent', () => {
       }
     });
   }
+
+  const providerSelections: KsAuthProvider[][] = [
+    [],
+    ['google'],
+    ['facebook'],
+    ['microsoft'],
+    ['google', 'facebook'],
+    ['google', 'microsoft'],
+    ['facebook', 'microsoft'],
+    ['google', 'facebook', 'microsoft'],
+  ];
+
+  for (const providers of providerSelections) {
+    it(`shows only selected sign-up providers: ${providers.join(', ') || 'none'}`, () => {
+      fixture.componentRef.setInput('providers', providers);
+      fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> =
+        fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+      expect(Array.from(buttons, button => button.textContent?.trim().toLowerCase()))
+        .toEqual(providers.map(provider => `sign up with ${provider}`));
+      expect(fixture.nativeElement.querySelector('.sign-up-providers') !== null)
+        .toBe(providers.length > 0);
+      expect(fixture.nativeElement.querySelector('button[type="submit"]')).not.toBeNull();
+
+      fixture.componentRef.setInput('providers', ['google', 'facebook', 'microsoft']);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.sign-up-providers button')).toHaveLength(3);
+    });
+  }
+
+  it('keeps selected Google and Facebook buttons disabled until their URLs are configured', () => {
+    fixture.componentRef.setInput('providers', ['google', 'facebook']);
+    fixture.detectChanges();
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+    expect(Array.from(buttons, button => button.disabled)).toEqual([true, true]);
+
+    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google/register');
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
+    fixture.detectChanges();
+    expect(Array.from(buttons, button => button.disabled)).toEqual([false, false]);
+  });
 
   const languages: {
     language: KsSignUpLanguage;

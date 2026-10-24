@@ -12,6 +12,7 @@ import { GoogleAuthService } from '../../services/google-auth.service';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 /** Theme mode controlled by the parent app. */
 export type KsLoginThemeMode = 'light' | 'dark';
@@ -44,6 +45,7 @@ export class KsLoginComponent {
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
   language = input<KsLoginLanguage>('en');
+  providers = input<readonly KsAuthProvider[]>(['google', 'facebook', 'microsoft']);
   googleAuthUrl = input('');
   googleReturnUrl = input('');
   facebookAuthUrl = input('');
@@ -90,6 +92,7 @@ export class KsLoginComponent {
     });
     dialogRef.componentRef?.setInput('language', this.language());
     dialogRef.componentRef?.setInput('themeMode', this.themeMode());
+    dialogRef.componentRef?.setInput('providers', this.providers());
     dialogRef.componentRef?.setInput('googleAuthUrl', this.googleAuthUrl());
     dialogRef.componentRef?.setInput('googleReturnUrl', this.googleReturnUrl());
     dialogRef.componentRef?.setInput('facebookAuthUrl', this.facebookAuthUrl());

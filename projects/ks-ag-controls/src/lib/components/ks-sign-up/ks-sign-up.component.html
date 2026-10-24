@@ -33,35 +33,43 @@
     {{ translations().signUp }}
   </button>
 </form>
-<div class="sign-up-providers">
-  @if (googleAuthFailed()) {
-    <p role="alert">{{ translations().googleAuthError }}</p>
-  }
-  @if (facebookAuthFailed()) {
-    <p role="alert">{{ translations().facebookAuthError }}</p>
-  }
-  <button mat-stroked-button type="button" [disabled]="!googleAuthUrl()" (click)="signInWith('google')">
-    <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.44c-.28 1.45-1.12 2.68-2.4 3.51v2.92h3.89c2.27-2.09 3.56-5.17 3.56-8.67Z" />
-      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.89-2.92c-1.08.72-2.46 1.15-4.06 1.15-3.12 0-5.77-2.1-6.72-4.93H1.27v3.01C3.25 21.3 7.27 24 12 24Z" />
-      <path fill="#FBBC05" d="M5.28 14.39a7.2 7.2 0 0 1 0-4.78V6.6H1.27a12 12 0 0 0 0 10.8l4.01-3.01Z" />
-      <path fill="#EA4335" d="M12 4.68c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.12 15.24 0 12 0 7.27 0 3.25 2.7 1.27 6.6l4.01 3.01C6.23 6.78 8.88 4.68 12 4.68Z" />
-    </svg>
-    {{ translations().signUpWithGoogle }}
-  </button>
-  <button mat-stroked-button type="button" [disabled]="!facebookAuthUrl()" (click)="signInWith('facebook')">
-    <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path fill="#1877F2" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.008 10.125 11.854v-8.385H7.078v-3.469h3.047V9.429c0-3.024 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.98h-1.513c-1.491 0-1.956.931-1.956 1.887v2.258h3.328l-.532 3.469h-2.796v8.385C19.612 23.081 24 18.092 24 12.073Z" />
-    </svg>
-    {{ translations().signUpWithFacebook }}
-  </button>
-  <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
-    <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path fill="#F25022" d="M1 1h10v10H1z" />
-      <path fill="#7FBA00" d="M13 1h10v10H13z" />
-      <path fill="#00A4EF" d="M1 13h10v10H1z" />
-      <path fill="#FFB900" d="M13 13h10v10H13z" />
-    </svg>
-    {{ translations().signUpWithMicrosoft }}
-  </button>
-</div>
+@if (providers().length) {
+  <div class="sign-up-providers">
+    @if (googleAuthFailed()) {
+      <p role="alert">{{ translations().googleAuthError }}</p>
+    }
+    @if (facebookAuthFailed()) {
+      <p role="alert">{{ translations().facebookAuthError }}</p>
+    }
+    @if (providers().includes('google')) {
+      <button mat-stroked-button type="button" [disabled]="!googleAuthUrl()" (click)="signInWith('google')">
+        <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.44c-.28 1.45-1.12 2.68-2.4 3.51v2.92h3.89c2.27-2.09 3.56-5.17 3.56-8.67Z" />
+          <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.89-2.92c-1.08.72-2.46 1.15-4.06 1.15-3.12 0-5.77-2.1-6.72-4.93H1.27v3.01C3.25 21.3 7.27 24 12 24Z" />
+          <path fill="#FBBC05" d="M5.28 14.39a7.2 7.2 0 0 1 0-4.78V6.6H1.27a12 12 0 0 0 0 10.8l4.01-3.01Z" />
+          <path fill="#EA4335" d="M12 4.68c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.12 15.24 0 12 0 7.27 0 3.25 2.7 1.27 6.6l4.01 3.01C6.23 6.78 8.88 4.68 12 4.68Z" />
+        </svg>
+        {{ translations().signUpWithGoogle }}
+      </button>
+    }
+    @if (providers().includes('facebook')) {
+      <button mat-stroked-button type="button" [disabled]="!facebookAuthUrl()" (click)="signInWith('facebook')">
+        <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="#1877F2" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.008 10.125 11.854v-8.385H7.078v-3.469h3.047V9.429c0-3.024 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.98h-1.513c-1.491 0-1.956.931-1.956 1.887v2.258h3.328l-.532 3.469h-2.796v8.385C19.612 23.081 24 18.092 24 12.073Z" />
+        </svg>
+        {{ translations().signUpWithFacebook }}
+      </button>
+    }
+    @if (providers().includes('microsoft')) {
+      <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
+        <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="#F25022" d="M1 1h10v10H1z" />
+          <path fill="#7FBA00" d="M13 1h10v10H13z" />
+          <path fill="#00A4EF" d="M1 13h10v10H1z" />
+          <path fill="#FFB900" d="M13 13h10v10H13z" />
+        </svg>
+        {{ translations().signUpWithMicrosoft }}
+      </button>
+    }
+  </div>
+}

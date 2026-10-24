@@ -7,6 +7,7 @@ import { AuthService, LoginResponse } from '../../services/auth.service';
 import { KsLoginLanguage } from './ks-login.translations';
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { GoogleAuthService } from '../../services/google-auth.service';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 describe('KsLoginComponent', () => {
   let component: KsLoginComponent;
@@ -101,6 +102,44 @@ describe('KsLoginComponent', () => {
     });
   }
 
+  const providerSelections: KsAuthProvider[][] = [
+    [],
+    ['google'],
+    ['facebook'],
+    ['microsoft'],
+    ['google', 'facebook'],
+    ['google', 'microsoft'],
+    ['facebook', 'microsoft'],
+    ['google', 'facebook', 'microsoft'],
+  ];
+
+  for (const providers of providerSelections) {
+    it(`shows only selected login providers: ${providers.join(', ') || 'none'}`, () => {
+      fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
+      fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
+      fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.login-providers button')).toHaveLength(3);
+
+      fixture.componentRef.setInput('providers', providers);
+      fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> =
+        fixture.nativeElement.querySelectorAll('.login-providers button');
+      expect(Array.from(buttons, button => button.textContent?.trim().toLowerCase()))
+        .toEqual(providers.map(provider => `sign in with ${provider}`));
+      expect(fixture.nativeElement.querySelector('.login-providers') !== null)
+        .toBe(providers.length > 0);
+      expect(fixture.nativeElement.querySelectorAll('.login-actions button')).toHaveLength(2);
+    });
+  }
+
+  it('still requires an auth URL for selected login providers', () => {
+    fixture.componentRef.setInput('providers', ['google']);
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.login-providers')).toBeNull();
+  });
+
   const languages: {
     language: KsLoginLanguage;
     signIn: string;
@@ -151,6 +190,7 @@ describe('KsLoginComponent', () => {
       fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
       fixture.componentRef.setInput('facebookReturnUrl', '/dashboard');
       fixture.componentRef.setInput('themeMode', 'dark');
+      fixture.componentRef.setInput('providers', ['facebook']);
       fixture.detectChanges();
       const button: HTMLButtonElement =
         fixture.nativeElement.querySelector('button[type="button"]');
@@ -165,6 +205,7 @@ describe('KsLoginComponent', () => {
       expect(dialogs[0].componentInstance).toBeInstanceOf(KsSignUpComponent);
       expect(dialogs[0].componentInstance.language()).toBe(text.language);
       expect(dialogs[0].componentInstance.themeMode()).toBe('dark');
+      expect(dialogs[0].componentInstance.providers()).toEqual(['facebook']);
       expect(dialogs[0].componentInstance.googleAuthUrl()).toBe('/api/auth/google');
       expect(dialogs[0].componentInstance.googleReturnUrl()).toBe('/dashboard');
       expect(dialogs[0].componentInstance.facebookAuthUrl()).toBe('/api/auth/facebook');
@@ -173,6 +214,9 @@ describe('KsLoginComponent', () => {
         .toBe(text.signUp);
       expect(document.querySelector('lib-ks-sign-up button[type="submit"]')?.textContent?.trim())
         .toBe(dialogs[0].componentInstance.translations().signUp);
+      const providerButtons = document.querySelectorAll('lib-ks-sign-up .sign-up-providers button');
+      expect(providerButtons).toHaveLength(1);
+      expect(providerButtons[0].textContent).toContain('Facebook');
       expect(login).not.toHaveBeenCalled();
 
       const closed = firstValueFrom(dialogs[0].afterClosed());
