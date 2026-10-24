@@ -141,6 +141,7 @@ describe('KsAgGridComponent', () => {
 
     expect(row.name).toBe('Grace');
     expect(saved).toEqual([row]);
+    expect(api.stopEditing).toHaveBeenLastCalledWith(false);
   });
 
   it('does not replace an edit snapshot if edit mode starts again before save or cancel', () => {
