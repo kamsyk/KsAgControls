@@ -5,14 +5,18 @@ import { KsSignUpLanguage } from './ks-sign-up.translations';
 import { MatButton } from '@angular/material/button';
 import { MatFormField } from '@angular/material/form-field';
 import { By } from '@angular/platform-browser';
+import { GoogleAuthService } from '../../services/google-auth.service';
 
 describe('KsSignUpComponent', () => {
   let component: KsSignUpComponent;
   let fixture: ComponentFixture<KsSignUpComponent>;
+  const googleAuth = { start: vi.fn(), startProvider: vi.fn() };
 
   beforeEach(async () => {
+    vi.resetAllMocks();
     await TestBed.configureTestingModule({
       imports: [KsSignUpComponent],
+      providers: [{ provide: GoogleAuthService, useValue: googleAuth }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(KsSignUpComponent);
@@ -22,6 +26,15 @@ describe('KsSignUpComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('applies dark theme styles when requested', () => {
+    const signUp: HTMLElement = fixture.nativeElement;
+    expect(signUp.classList.contains('ks-sign-up--dark')).toBe(false);
+
+    fixture.componentRef.setInput('themeMode', 'dark');
+    fixture.detectChanges();
+    expect(signUp.classList.contains('ks-sign-up--dark')).toBe(true);
   });
 
   it('defaults to English', () => {
@@ -41,6 +54,51 @@ describe('KsSignUpComponent', () => {
     expect(fixture.nativeElement.querySelector('input[formControlName="password"]').autocomplete)
       .toBe('new-password');
   });
+
+  it('shows a brand icon on each provider button', () => {
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.sign-up-providers button');
+    expect(buttons).toHaveLength(3);
+    buttons.forEach((button) => {
+      const icon = button.querySelector('svg.provider-icon');
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(icon?.querySelector('path')?.getAttribute('fill')).toBeTruthy();
+    });
+  });
+
+  for (const provider of ['google', 'facebook'] as const) {
+    it(`preserves ${provider} registration and displays failures`, () => {
+      const url = `/api/auth/${provider}/register`;
+      fixture.componentRef.setInput(`${provider}AuthUrl`, url);
+      fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
+      fixture.detectChanges();
+      const button: HTMLButtonElement = fixture.nativeElement.querySelectorAll('.sign-up-providers button')[
+        provider === 'google' ? 0 : 1
+      ];
+      button.click();
+      if (provider === 'google') {
+        expect(googleAuth.start).toHaveBeenCalledWith(url, '/advisor');
+      } else {
+        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', 'Facebook');
+      }
+
+      const start = provider === 'google' ? googleAuth.start : googleAuth.startProvider;
+      start.mockImplementationOnce(() => { throw new Error('Invalid provider configuration'); });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        button.click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[role="alert"]').textContent)
+          .toContain(component.translations()[`${provider}AuthError`]);
+        expect(log).toHaveBeenCalled();
+        button.click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+      } finally {
+        log.mockRestore();
+      }
+    });
+  }
 
   const languages: {
     language: KsSignUpLanguage;
@@ -161,6 +219,8 @@ describe('KsSignUpComponent', () => {
 
   it('preserves OAuth provider actions with translated buttons', () => {
     fixture.componentRef.setInput('language', 'cs');
+    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google/register');
+    fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook/register');
     fixture.detectChanges();
     const signInWith = vi.spyOn(component, 'signInWith').mockImplementation(() => undefined);
     try {

@@ -6,18 +6,23 @@ import { KsLoginComponent } from './ks-login.component';
 import { AuthService, LoginResponse } from '../../services/auth.service';
 import { KsLoginLanguage } from './ks-login.translations';
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
+import { GoogleAuthService } from '../../services/google-auth.service';
 
 describe('KsLoginComponent', () => {
   let component: KsLoginComponent;
   let fixture: ComponentFixture<KsLoginComponent>;
   const login = vi.fn();
+  const googleAuth = { start: vi.fn(), startProvider: vi.fn() };
 
   beforeEach(async () => {
     login.mockReset();
+    googleAuth.start.mockReset();
+    googleAuth.startProvider.mockReset();
     await TestBed.configureTestingModule({
       imports: [KsLoginComponent],
       providers: [
         { provide: AuthService, useValue: { login } },
+        { provide: GoogleAuthService, useValue: googleAuth },
       ],
     }).compileComponents();
 
@@ -65,6 +70,36 @@ describe('KsLoginComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('button')).toHaveLength(2);
   });
 
+  for (const provider of ['google', 'facebook'] as const) {
+    it(`preserves ${provider} sign-in and reports configuration failures`, () => {
+      const url = `/api/auth/${provider}`;
+      fixture.componentRef.setInput(`${provider}AuthUrl`, url);
+      fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
+      fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
+      const button = Array.from(buttons).find(element =>
+        element.textContent?.includes(provider === 'google' ? 'Google' : 'Facebook'));
+      expect(button).toBeDefined();
+      button!.click();
+      if (provider === 'google') {
+        expect(googleAuth.start).toHaveBeenCalledWith(url, '/advisor');
+      } else {
+        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', 'Facebook');
+      }
+      const start = provider === 'google' ? googleAuth.start : googleAuth.startProvider;
+      start.mockImplementationOnce(() => { throw new Error('Invalid provider configuration'); });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        button!.click();
+        fixture.detectChanges();
+        expect(component.error).toBe(component.translations()[`${provider}AuthError`]);
+        expect(log).toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    });
+  }
+
   const languages: {
     language: KsLoginLanguage;
     signIn: string;
@@ -110,6 +145,11 @@ describe('KsLoginComponent', () => {
   for (const text of languages) {
     it(`opens sign-up in ${text.language} without submitting login`, async () => {
       fixture.componentRef.setInput('language', text.language);
+      fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
+      fixture.componentRef.setInput('googleReturnUrl', '/dashboard');
+      fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
+      fixture.componentRef.setInput('facebookReturnUrl', '/dashboard');
+      fixture.componentRef.setInput('themeMode', 'dark');
       fixture.detectChanges();
       const button: HTMLButtonElement =
         fixture.nativeElement.querySelector('button[type="button"]');
@@ -123,6 +163,11 @@ describe('KsLoginComponent', () => {
       expect(dialogs).toHaveLength(1);
       expect(dialogs[0].componentInstance).toBeInstanceOf(KsSignUpComponent);
       expect(dialogs[0].componentInstance.language()).toBe(text.language);
+      expect(dialogs[0].componentInstance.themeMode()).toBe('dark');
+      expect(dialogs[0].componentInstance.googleAuthUrl()).toBe('/api/auth/google');
+      expect(dialogs[0].componentInstance.googleReturnUrl()).toBe('/dashboard');
+      expect(dialogs[0].componentInstance.facebookAuthUrl()).toBe('/api/auth/facebook');
+      expect(dialogs[0].componentInstance.facebookReturnUrl()).toBe('/dashboard');
       expect(document.querySelector('mat-dialog-container')?.getAttribute('aria-label'))
         .toBe(text.signUp);
       expect(document.querySelector('lib-ks-sign-up button[type="submit"]')?.textContent?.trim())
