@@ -97,6 +97,8 @@ export class KsLoginComponent {
     dialogRef.componentRef?.setInput('googleReturnUrl', this.googleReturnUrl());
     dialogRef.componentRef?.setInput('facebookAuthUrl', this.facebookAuthUrl());
     dialogRef.componentRef?.setInput('facebookReturnUrl', this.facebookReturnUrl());
+    dialogRef.componentRef?.setInput('microsoftAuthUrl', this.microsoftAuthUrl());
+    dialogRef.componentRef?.setInput('microsoftReturnUrl', this.microsoftReturnUrl());
   }
 
   signInWithGoogle() {

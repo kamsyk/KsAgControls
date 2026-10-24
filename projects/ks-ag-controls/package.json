@@ -1,6 +1,6 @@
 {
   "name": "ks-ag-controls",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "style": "./styles/ks-ag-controls.css",
   "peerDependencies": {
     "ag-grid-angular": "^35.2.1",

@@ -69,7 +69,7 @@ The Sign up button opens `KsSignUpComponent` in a Material dialog with the
 currently selected login language. It is available even when the login form is
 empty and disabled while login is in progress. Closing the dialog leaves the
 login form unchanged. The registration component currently contains placeholder
-password submission and Microsoft handlers; opening it does not
+password submission; opening it does not
 configure a registration API.
 
 ```html
@@ -127,9 +127,8 @@ Facebook, Microsoft regardless of array order.
 
 Login forwards its selection to the sign-up dialog when opening it. Selection
 does not configure endpoints or implement authentication: login still requires
-the selected provider's auth URL to show its button, and sign-up still disables
-Google/Facebook buttons without their URLs. The existing Microsoft sign-up
-handler remains a placeholder. This input controls the UI only; backend
+the selected provider's auth URL to show its button, and sign-up disables
+all provider buttons without their URLs. This input controls the UI only; backend
 authentication policies must be enforced by the consuming app.
 
 ### Google Authentication (Backend Redirect)
@@ -206,16 +205,26 @@ API remains compatible; the shared navigation implementation is available as
 
 ### Microsoft Authentication (Backend Redirect)
 
-Login accepts `microsoftAuthUrl` and `microsoftReturnUrl` inputs with the same URL
-validation and browser-only navigation rules as Google and Facebook. Login hides its
-Microsoft button when no URL is configured, and navigation failures are displayed
-in Czech, English, and German.
+Both login and, since version 0.0.10, sign-up accept `microsoftAuthUrl` and
+`microsoftReturnUrl` inputs (default `''`) with the same URL validation and
+browser-only navigation rules as Google and Facebook. The optional return URL is
+sent as the `returnUrl` query parameter, not as the OAuth callback URL. Login hides
+its Microsoft button when no URL is configured; sign-up disables its button.
+Both actions work without a valid password form, and navigation failures are
+displayed in Czech, English, and German and cleared on the next provider attempt.
+Login forwards both inputs to its sign-up dialog. When login and registration
+have separate endpoints, configure the dialog's `microsoftAuthUrl` with the
+registration endpoint, as for Google and Facebook.
 
 ```html
 <lib-ks-login
   loginUrl="/api/auth/login"
   redirectUrl="/advisor"
   microsoftAuthUrl="/api/auth/microsoft"
+  microsoftReturnUrl="/advisor"
+/>
+<lib-ks-sign-up
+  microsoftAuthUrl="/api/auth/microsoft/register"
   microsoftReturnUrl="/advisor"
 />
 ```

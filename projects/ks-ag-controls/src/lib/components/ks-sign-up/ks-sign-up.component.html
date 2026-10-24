@@ -41,6 +41,9 @@
     @if (facebookAuthFailed()) {
       <p role="alert">{{ translations().facebookAuthError }}</p>
     }
+    @if (microsoftAuthFailed()) {
+      <p role="alert">{{ translations().microsoftAuthError }}</p>
+    }
     @if (providers().includes('google')) {
       <button mat-stroked-button type="button" [disabled]="!googleAuthUrl()" (click)="signInWith('google')">
         <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -61,7 +64,7 @@
       </button>
     }
     @if (providers().includes('microsoft')) {
-      <button mat-stroked-button type="button" (click)="signInWith('microsoft')">
+      <button mat-stroked-button type="button" [disabled]="!microsoftAuthUrl()" (click)="signInWith('microsoft')">
         <svg matButtonIcon class="provider-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="#F25022" d="M1 1h10v10H1z" />
           <path fill="#7FBA00" d="M13 1h10v10H13z" />

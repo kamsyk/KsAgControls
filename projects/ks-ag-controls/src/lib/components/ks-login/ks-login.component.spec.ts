@@ -189,6 +189,8 @@ describe('KsLoginComponent', () => {
       fixture.componentRef.setInput('googleReturnUrl', '/dashboard');
       fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
       fixture.componentRef.setInput('facebookReturnUrl', '/dashboard');
+      fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft/register');
+      fixture.componentRef.setInput('microsoftReturnUrl', '/dashboard');
       fixture.componentRef.setInput('themeMode', 'dark');
       fixture.componentRef.setInput('providers', ['facebook']);
       fixture.detectChanges();
@@ -210,6 +212,8 @@ describe('KsLoginComponent', () => {
       expect(dialogs[0].componentInstance.googleReturnUrl()).toBe('/dashboard');
       expect(dialogs[0].componentInstance.facebookAuthUrl()).toBe('/api/auth/facebook');
       expect(dialogs[0].componentInstance.facebookReturnUrl()).toBe('/dashboard');
+      expect(dialogs[0].componentInstance.microsoftAuthUrl()).toBe('/api/auth/microsoft/register');
+      expect(dialogs[0].componentInstance.microsoftReturnUrl()).toBe('/dashboard');
       expect(document.querySelector('mat-dialog-container')?.getAttribute('aria-label'))
         .toBe(text.signUp);
       expect(document.querySelector('lib-ks-sign-up button[type="submit"]')?.textContent?.trim())
