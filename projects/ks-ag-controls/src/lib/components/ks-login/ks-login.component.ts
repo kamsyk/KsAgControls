@@ -7,6 +7,7 @@ import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
 import { GoogleAuthService } from '../../services/google-auth.service';
 import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
@@ -25,6 +26,7 @@ export type KsLoginStyles = Record<string, string>;
     MatFormField,
     MatInputModule,
     ReactiveFormsModule,
+    MatButtonModule,
     KsButtonComponent,
     NgClass,
     NgStyle,
