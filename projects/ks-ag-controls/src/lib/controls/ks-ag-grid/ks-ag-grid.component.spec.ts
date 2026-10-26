@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AgGridAngular } from 'ag-grid-angular';
+import { CellClickedEvent } from 'ag-grid-community';
 
 import { KsAgGridComponent } from './ks-ag-grid.component';
 
@@ -56,6 +57,179 @@ describe('KsAgGridComponent', () => {
     fixture.detectChanges();
 
     expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
+  });
+
+  it('keeps the toolbar optional and updates the entire shell when the theme changes', () => {
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.grid-toolbar')).toBeNull();
+    expect(host.querySelector('.grid-shell--dark')).toBeNull();
+
+    fixture.componentRef.setInput('enableSettingsPersistence', true);
+    fixture.componentRef.setInput('themeMode', 'dark');
+    fixture.detectChanges();
+
+    expect(host.querySelector('.grid-toolbar')).not.toBeNull();
+    expect(host.querySelector('.grid-shell--dark')).not.toBeNull();
+    expect(host.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('Grid settings');
+
+    fixture.componentRef.setInput('themeMode', 'light');
+    fixture.detectChanges();
+    expect(host.querySelector('.grid-shell--dark')).toBeNull();
+  });
+
+  it('renders labeled toolbar buttons with icons and preserves their handlers', () => {
+    const save = vi.spyOn(component, 'saveSettings').mockImplementation(() => undefined);
+    const clear = vi.spyOn(component, 'clearSettings').mockImplementation(() => undefined);
+    const add = vi.spyOn(component, 'addNewItem').mockImplementation(() => undefined);
+    fixture.componentRef.setInput('enableSettingsPersistence', true);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const buttons = host.querySelectorAll<HTMLButtonElement>('.grid-toolbar button');
+    expect(Array.from(buttons, (button) => button.textContent?.trim())).toEqual([
+      'Save Settings', 'Clear Settings', 'Add New Item',
+    ]);
+    for (const button of buttons) {
+      expect(button.type).toBe('button');
+      expect(button.querySelector('svg')).not.toBeNull();
+      button.click();
+    }
+    expect(save).toHaveBeenCalledOnce();
+    expect(clear).toHaveBeenCalledOnce();
+    expect(add).toHaveBeenCalledOnce();
+  });
+
+  function actionColumn(deleteOnly = false) {
+    component.columnDefs = [{ field: 'name' }];
+    component.enableActionButtons = !deleteOnly;
+    component.enableRowDeletion = deleteOnly;
+    return component.effectiveColumnDefs[0];
+  }
+
+  function renderActions(row?: GridRow, deleteOnly = false) {
+    const column = actionColumn(deleteOnly);
+    const renderer = column.cellRenderer as (params: { data?: GridRow }) => string;
+    const cell = document.createElement('div');
+    cell.className = 'ag-cell';
+    cell.tabIndex = 0;
+    cell.innerHTML = renderer({ data: row });
+    return { cell, column };
+  }
+
+  function clickAction(target: Element | null, deleteOnly = false) {
+    if (!target) throw new Error('Expected an action target');
+    const { column } = renderActions(undefined, deleteOnly);
+    const mouseEvent = new MouseEvent('click');
+    Object.defineProperty(mouseEvent, 'target', { value: target });
+    const onClick = column.onCellClicked as (
+      params: Pick<CellClickedEvent<GridRow>, 'data' | 'event'>
+    ) => void;
+    onClick({ data: actionRow, event: mouseEvent });
+  }
+
+  const actionRow: GridRow = { id: 1, name: 'Ada' };
+
+  it('renders compact edit/delete icons with accessible names and no visible text', () => {
+    const { cell, column } = renderActions(actionRow);
+    expect(column.width).toBe(104);
+    expect(column.flex).toBe(0);
+    const rendererOptions = column.cellRendererParams as { suppressMouseEventHandling(): boolean };
+    expect(rendererOptions.suppressMouseEventHandling()).toBe(true);
+    const buttons = cell.querySelectorAll<HTMLButtonElement>('button');
+    expect(Array.from(buttons, (button) => button.getAttribute('aria-label')))
+      .toEqual(['Edit row', 'Delete row']);
+    for (const button of buttons) {
+      expect(button.type).toBe('button');
+      expect(button.title).toBe(button.getAttribute('aria-label'));
+      expect(button.textContent?.trim()).toBe('');
+      expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      expect(button.querySelector('svg')?.getAttribute('focusable')).toBe('false');
+      expect(button.querySelector('path')?.getAttribute('d')).toBeTruthy();
+    }
+  });
+
+  it('renders save/cancel icons in edit mode and returns to edit/delete after cancelling', () => {
+    stubGridApi(component);
+    component.enterEditMode(actionRow);
+    let { cell } = renderActions(actionRow);
+    expect(Array.from(cell.querySelectorAll('button'), (button) => button.getAttribute('aria-label')))
+      .toEqual(['Save row', 'Cancel editing']);
+    component.cancelEdit(actionRow);
+    ({ cell } = renderActions(actionRow));
+    expect(cell.querySelector('[data-action="edit"]')).not.toBeNull();
+    expect(cell.querySelector('[data-action="save"]')).toBeNull();
+  });
+
+  it('renders a single icon in deletion-only mode and no actions for loading rows', () => {
+    const { cell, column } = renderActions(actionRow, true);
+    expect(column.width).toBe(72);
+    expect(cell.querySelectorAll('button')).toHaveLength(1);
+    expect(cell.querySelector('button')?.getAttribute('aria-label')).toBe('Delete row');
+    expect(renderActions().cell.innerHTML).toBe('');
+    expect(renderActions(undefined, true).cell.innerHTML).toBe('');
+  });
+
+  it.each([
+    ['edit', 'enterEditMode'],
+    ['save', 'saveRow'],
+    ['cancel', 'cancelEdit'],
+    ['delete', 'deleteRow'],
+  ] as const)('dispatches %s from a nested SVG path', (action, method) => {
+    const handler = vi.spyOn(component, method).mockImplementation(() => undefined);
+    const { cell } = renderActions(actionRow);
+    if (action === 'save' || action === 'cancel') {
+      mockGridApi();
+      component.enterEditMode(actionRow);
+      cell.innerHTML = renderActions(actionRow).cell.innerHTML;
+    }
+    clickAction(cell.querySelector(`[data-action="${action}"] path`));
+    expect(handler).toHaveBeenCalledWith(actionRow);
+  });
+
+  it('deletes only when its icon button is activated, not when cell whitespace is clicked', () => {
+    const handler = vi.spyOn(component, 'deleteRow').mockImplementation(() => undefined);
+    const { cell } = renderActions(actionRow, true);
+    clickAction(cell, true);
+    expect(handler).not.toHaveBeenCalled();
+    clickAction(cell.querySelector('svg'), true);
+    expect(handler).toHaveBeenCalledWith(actionRow);
+  });
+
+  it('keeps focus in the action cell when refreshing replaces the activated button', () => {
+    const { cell } = renderActions(actionRow);
+    const button = cell.querySelector<HTMLButtonElement>('button')!;
+    vi.spyOn(component, 'enterEditMode').mockImplementation(() => {
+      cell.innerHTML = '';
+    });
+    document.body.appendChild(cell);
+    try {
+      button.focus();
+      clickAction(button.querySelector('path'));
+      expect(document.activeElement).toBe(cell);
+    } finally {
+      cell.remove();
+    }
+  });
+
+  it('lets Tab move between icon buttons and native Enter/Space activate them', () => {
+    const { cell, column } = renderActions(actionRow);
+    const buttons = cell.querySelectorAll('button');
+    const suppress = column.suppressKeyboardEvent as (params: { event: KeyboardEvent }) => boolean;
+    const isSuppressed = (target: Element, key: string, shiftKey = false) => {
+      const event = new KeyboardEvent('keydown', { key, shiftKey });
+      Object.defineProperty(event, 'target', { value: target });
+      return suppress({ event });
+    };
+    expect(isSuppressed(cell, 'Tab')).toBe(true);
+    expect(isSuppressed(buttons[0], 'Tab')).toBe(true);
+    expect(isSuppressed(buttons[1], 'Tab')).toBe(false);
+    expect(isSuppressed(buttons[1], 'Tab', true)).toBe(true);
+    expect(isSuppressed(buttons[0], 'Tab', true)).toBe(false);
+    expect(isSuppressed(buttons[0], 'Enter')).toBe(true);
+    expect(isSuppressed(buttons[0], ' ')).toBe(true);
+    expect(isSuppressed(cell, 'Enter')).toBe(false);
+    expect(isSuppressed(buttons[0], 'ArrowRight')).toBe(false);
   });
 
   function mockGridApi() {
@@ -179,7 +353,7 @@ describe('KsAgGridComponent', () => {
   });
 });
 
-function stubGridApi(component: KsAgGridComponent) {
+function stubGridApi<TData>(component: KsAgGridComponent<TData>) {
   const api = {
     applyTransaction: vi.fn().mockReturnValue({ remove: [{}], add: [], update: [] }),
     getRowNode: vi.fn().mockReturnValue(undefined),

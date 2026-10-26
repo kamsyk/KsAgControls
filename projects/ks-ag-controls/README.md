@@ -42,10 +42,42 @@ If you build only the library entrypoint directly (`ng build ks-ag-controls`), r
 npm run build:lib:styles
 ```
 
-### Grid Toolbar Icons
+### Grid Layout and Themes
 
-The library uses a local SVG pool of Google Material Symbols Outlined icons (Apache-2.0).
-Currently the pool includes `save`. The grid renders it as inline SVG, without an icon font,
+`KsAgGridComponent` uses a unified, rounded layout with a responsive toolbar,
+compact row actions, and a wrapping pagination footer. Set `themeMode` to
+`'light'` (the default) or `'dark'` to theme the entire grid, including the toolbar,
+buttons, headers, rows, and pagination. Theme changes apply at runtime.
+
+```html
+<lib-ks-ag-grid
+  [rowData]="rows"
+  [columnDefs]="columns"
+  [enableSettingsPersistence]="true"
+  [enableActionButtons]="true"
+  [themeMode]="selectedTheme"
+/>
+```
+
+As before, `enableSettingsPersistence` displays Save Settings, Clear Settings,
+and Add New Item. Clear Settings removes the saved settings; it does not reset
+the current grid configuration. `enableActionButtons` displays Edit/Delete icons,
+replaced by Save/Cancel while editing. With only `enableRowDeletion`, the grid
+displays a single Delete icon. Existing outputs and editing behavior are unchanged.
+
+Row action buttons have accessible labels, native title tooltips, visible keyboard
+focus, and a minimum 32px target. Tab moves between actions before returning to
+grid navigation; Enter or Space activates the focused button. Action columns
+are fixed at 104px (Edit/Delete) or 72px (Delete only). Data columns continue to
+resize normally. At narrow widths, toolbar controls and pagination wrap while
+data columns retain AG Grid's horizontal scrolling. Button transitions respect
+the reduced-motion preference.
+
+### Grid Icons
+
+The library uses a local SVG pool of Google Material icons (Apache-2.0).
+The pool includes `save`, `edit`, `delete`, `check`, `close`, `add`, and `refresh`.
+The grid renders them as inline SVG, without an icon font,
 asset URLs, CDN requests, or special `font-src` permissions.
 
 Import `KsIconComponent` in a consuming component's `imports`, then use:
