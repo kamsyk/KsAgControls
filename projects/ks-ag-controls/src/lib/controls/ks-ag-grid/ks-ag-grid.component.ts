@@ -26,6 +26,7 @@ import {
 } from 'ag-grid-community';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { KsIconComponent } from '../ks-icon/ks-icon.component';
+import { KS_ICONS, KsIconName } from '../ks-icon/ks-icons';
 
 export interface KsAgGridServerRequest {
   startRow: number;
@@ -115,10 +116,29 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   private cachedRowDeletion?: boolean;
   private readonly emptyColumnDefs: ColDef<TData>[] = [];
 
-  private readonly lightTheme: Theme = themeQuartz;
-  private readonly darkTheme: Theme = themeQuartz.withParams({
-    backgroundColor: '#1e1e1e',
-    foregroundColor: '#ffffff',
+  private readonly lightTheme: Theme = themeQuartz.withParams({
+    accentColor: 'var(--ks-grid-accent)',
+    backgroundColor: 'var(--ks-grid-surface)',
+    foregroundColor: 'var(--ks-grid-text)',
+    borderColor: 'var(--ks-grid-border)',
+    headerBackgroundColor: 'var(--ks-grid-subtle)',
+    headerTextColor: 'var(--ks-grid-muted)',
+    oddRowBackgroundColor: 'var(--ks-grid-surface)',
+    rowHoverColor: 'var(--ks-grid-hover)',
+    selectedRowBackgroundColor: 'var(--ks-grid-selected)',
+    fontFamily: 'inherit',
+    fontSize: 13,
+    headerFontSize: 12,
+    headerFontWeight: 600,
+    rowHeight: 48,
+    headerHeight: 44,
+    columnBorder: false,
+    wrapperBorder: false,
+    wrapperBorderRadius: 0,
+    cellHorizontalPadding: 16,
+    browserColorScheme: 'light',
+  });
+  private readonly darkTheme: Theme = this.lightTheme.withParams({
     browserColorScheme: 'dark',
   });
 
@@ -174,89 +194,125 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
     // Add action buttons column (edit/save/delete)
     if (this.enableActionButtons) {
-      const actionsColumn = {
+      const actionsColumn: ColDef<TData> = {
         colId: 'ks-ag-grid-actions',
         headerName: 'Actions',
-        width: 180,
-        minWidth: 180,
-        maxWidth: 180,
+        width: 104,
+        minWidth: 104,
+        maxWidth: 104,
+        flex: 0,
         pinned: 'left',
         sortable: false,
         filter: false,
         editable: false,
         resizable: false,
-        cellRenderer: (params: ICellRendererParams<TData>) => {
-          if (!params.data) return '';
-
-          const isEditing = this.editingRows.has(params.data);
-
-          if (isEditing) {
-            return `
-              <div class="action-buttons">
-                <button class="save-btn" data-action="save">Save</button>
-                <button class="cancel-btn" data-action="cancel">Cancel</button>
-              </div>
-            `;
-          } else {
-            return `
-              <div class="action-buttons">
-                <button class="edit-btn" data-action="edit">Edit</button>
-                <button class="delete-btn" data-action="delete">Delete</button>
-              </div>
-            `;
-          }
-        },
-        onCellClicked: (params: CellClickedEvent<TData>) => {
-          if (!params.data) return;
-
-          const target = (params.event as MouseEvent).target as HTMLElement;
-          const action = target.getAttribute('data-action');
-
-          switch (action) {
-            case 'edit':
-              this.enterEditMode(params.data);
-              break;
-            case 'save':
-              this.saveRow(params.data);
-              break;
-            case 'cancel':
-              this.cancelEdit(params.data);
-              break;
-            case 'delete':
-              this.deleteRow(params.data);
-              break;
-          }
-        },
-      } as ColDef<TData>;
+        cellClass: 'ks-grid-action-cell',
+        cellRendererParams: { suppressMouseEventHandling: () => true },
+        cellRenderer: (params: ICellRendererParams<TData>) => this.renderRowActions(params),
+        onCellClicked: (params) => this.onActionClicked(params),
+        suppressKeyboardEvent: ({ event }) => this.suppressActionKeyboardEvent(event),
+      };
       columns.unshift(actionsColumn);
     }
     // Fallback to simple delete button column
     else if (this.enableRowDeletion) {
-      const deleteColumn = {
+      const deleteColumn: ColDef<TData> = {
         colId: 'ks-ag-grid-delete',
-        headerName: '',
-        width: 70,
-        minWidth: 70,
-        maxWidth: 70,
+        headerName: 'Actions',
+        width: 72,
+        minWidth: 72,
+        maxWidth: 72,
+        flex: 0,
         pinned: 'left',
         sortable: false,
         filter: false,
         editable: false,
         resizable: false,
-        cellRenderer: () => {
-          return '<button class="delete-btn" style="cursor: pointer; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px;">Delete</button>';
-        },
-        onCellClicked: (params: CellClickedEvent<TData>) => {
-          if (params.data) {
-            this.deleteRow(params.data);
-          }
-        },
-      } as ColDef<TData>;
+        cellClass: 'ks-grid-action-cell',
+        cellRendererParams: { suppressMouseEventHandling: () => true },
+        cellRenderer: (params: ICellRendererParams<TData>) => this.renderRowActions(params, true),
+        onCellClicked: (params) => this.onActionClicked(params),
+        suppressKeyboardEvent: ({ event }) => this.suppressActionKeyboardEvent(event),
+      };
       columns.unshift(deleteColumn);
     }
 
     this.cachedEffectiveColumnDefs = columns;
     return columns;
+  }
+
+  private renderRowActions(params: ICellRendererParams<TData>, deleteOnly = false): string {
+    if (!params.data) return '';
+
+    const buttons = deleteOnly
+      ? this.renderActionButton('delete', 'delete', 'Delete row')
+      : this.editingRows.has(params.data)
+        ? this.renderActionButton('save', 'check', 'Save row') +
+          this.renderActionButton('cancel', 'close', 'Cancel editing')
+        : this.renderActionButton('edit', 'edit', 'Edit row') +
+          this.renderActionButton('delete', 'delete', 'Delete row');
+
+    return `<div class="ks-grid-row-actions">${buttons}</div>`;
+  }
+
+  private renderActionButton(action: string, name: KsIconName, label: string): string {
+    const icon = KS_ICONS[name];
+    return `<button type="button" class="ks-grid-action ks-grid-action--${action}"
+      data-action="${action}" aria-label="${label}" title="${label}">
+      <svg viewBox="${icon.viewBox}" aria-hidden="true" focusable="false">
+        <path d="${icon.path}"></path>
+      </svg>
+    </button>`;
+  }
+
+  private onActionClicked(params: CellClickedEvent<TData>): void {
+    const target = params.event?.target;
+    if (!params.data || !(target instanceof Element)) return;
+
+    // SVG paths, not just the button itself, can be the click target.
+    const button = target.closest<HTMLButtonElement>('button[data-action]');
+    if (!button) return;
+
+    const action = button.getAttribute('data-action');
+    const cell = button.closest<HTMLElement>('.ag-cell');
+    const restoreFocus = button === button.ownerDocument.activeElement;
+    switch (action) {
+      case 'edit':
+        this.enterEditMode(params.data);
+        break;
+      case 'save':
+        this.saveRow(params.data);
+        break;
+      case 'cancel':
+        this.cancelEdit(params.data);
+        break;
+      case 'delete':
+        this.deleteRow(params.data);
+        break;
+    }
+    // Refreshing replaces the buttons; keep keyboard focus in the surviving cell.
+    if (restoreFocus && action !== 'delete') {
+      cell?.focus();
+    }
+  }
+
+  private suppressActionKeyboardEvent(event: KeyboardEvent): boolean {
+    if (!(event.target instanceof Element)) return false;
+
+    const button = event.target.closest('button[data-action]');
+    if (event.key === 'Enter' || event.key === ' ') {
+      return !!button;
+    }
+    if (event.key !== 'Tab') return false;
+
+    const buttons = event.target.closest('.ag-cell')
+      ?.querySelectorAll('button[data-action]');
+    if (!buttons?.length) return false;
+
+    // Let native Tab reach each button; hand navigation back to the grid at the edges.
+    return event.shiftKey
+      ? !!button && button !== buttons[0]
+      : button !== buttons[buttons.length - 1];
   }
 
   datasource?: IDatasource;

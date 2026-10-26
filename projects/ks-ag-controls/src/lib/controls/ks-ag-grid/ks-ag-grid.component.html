@@ -1,33 +1,41 @@
-<div>
+<div class="grid-shell" [class.grid-shell--dark]="themeMode === 'dark'">
   @if (enableSettingsPersistence) {
     <div class="grid-toolbar">
-      <button (click)="saveSettings()">
-        <lib-ks-icon name="save" />
-        Save Settings img
+      <div class="grid-toolbar-settings" role="group" aria-label="Grid settings">
+        <button type="button" class="grid-toolbar-button" (click)="saveSettings()">
+          <lib-ks-icon name="save" />
+          Save Settings
+        </button>
+        <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="clearSettings()">
+          <lib-ks-icon name="refresh" />
+          Clear Settings
+        </button>
+      </div>
+      <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
+        <lib-ks-icon name="add" />
+        Add New Item
       </button>
-      <button (click)="clearSettings()">Clear Settings</button>
-      <button (click)="addNewItem()">Add New Item</button>
     </div>
   }
 
   <ag-grid-angular
-          [class]="gridClass"
-          [theme]="theme"
-          [style]="style"
-          [modules]="modules"
-          [rowModelType]="rowModelType"
-          [rowData]="useServerSideData ? undefined : rowData"
-          [datasource]="datasource"
-          [columnDefs]="effectiveColumnDefs"
-          [defaultColDef]="defaultColDef"
-          domLayout="autoHeight"
-          [pagination]="true"
-          [paginationPageSize]="pageSize"
-          [paginationPageSizeSelector]="pageSizeOptions"
-          [cacheBlockSize]="pageSize"
-          [animateRows]="true"
-          [loading]="loading"
-          (gridReady)="onGridReady()"
-          (cellValueChanged)="onCellValueChanged($event)">
-        </ag-grid-angular>
+    [class]="gridClass"
+    [theme]="theme"
+    [style]="style"
+    [modules]="modules"
+    [rowModelType]="rowModelType"
+    [rowData]="useServerSideData ? undefined : rowData"
+    [datasource]="datasource"
+    [columnDefs]="effectiveColumnDefs"
+    [defaultColDef]="defaultColDef"
+    domLayout="autoHeight"
+    [pagination]="true"
+    [paginationPageSize]="pageSize"
+    [paginationPageSizeSelector]="pageSizeOptions"
+    [cacheBlockSize]="pageSize"
+    [animateRows]="true"
+    [loading]="loading"
+    (gridReady)="onGridReady()"
+    (cellValueChanged)="onCellValueChanged($event)">
+  </ag-grid-angular>
 </div>
