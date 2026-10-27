@@ -17,6 +17,7 @@ describe('KsAgGridComponent', () => {
   let fixture: ComponentFixture<KsAgGridComponent>;
 
   beforeEach(async () => {
+    vi.stubGlobal('alert', vi.fn());
     await TestBed.configureTestingModule({
       imports: [KsAgGridComponent]
     })
@@ -24,6 +25,10 @@ describe('KsAgGridComponent', () => {
 
     fixture = TestBed.createComponent(KsAgGridComponent);
     component = fixture.componentInstance as KsAgGridComponent<GridRow>;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('should create', () => {
@@ -353,26 +358,71 @@ describe('KsAgGridComponent', () => {
     return { row, api, host, input, saved };
   }
 
+  it('publishes the committed values, not the pre-edit values, when leaving a row', async () => {
+    const { api, saved } = await prepareRowExitTest();
+    const payloads: string[] = [];
+    component.rowSaved.subscribe((data) => payloads.push(JSON.stringify(data)));
+
+    api.setFocusedCell(1, 'name');
+
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    expect(payloads).toEqual([JSON.stringify({ id: 1, name: 'Updated', note: 'Original' })]);
+  });
+
   it.each([false, true])('saves once on row exit (server-side data: %s)', async (serverSide) => {
     const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+    const saveRow = vi.spyOn(component, 'saveRow');
 
     api.setFocusedCell(1, 'name');
 
     await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+    expect(saveRow).toHaveBeenCalledExactlyOnceWith(row);
     expect(row.name).toBe('Updated');
     expect(api.getEditingCells()).toHaveLength(0);
     expect(host.querySelector('[data-action="save"]')).toBeNull();
     expect(host.querySelectorAll('[data-action="edit"]')).toHaveLength(2);
   });
 
+  it.each([false, true])('calls saveRow when another row is clicked without a focus change (server-side data: %s)', async (serverSide) => {
+    const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+    const saveRow = vi.spyOn(component, 'saveRow');
+    const payloads: string[] = [];
+    component.rowSaved.subscribe((data) => payloads.push(JSON.stringify(data)));
+    const cell = host.querySelector<HTMLElement>('.ag-row[row-index="1"] [col-id="name"]')!;
+
+    // A click without mousedown leaves grid focus unchanged.
+    cell.click();
+
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+    expect(saveRow).toHaveBeenCalledExactlyOnceWith(row);
+    expect(payloads).toEqual([JSON.stringify({ id: 1, name: 'Updated', note: 'Original' })]);
+    expect(api.getEditingCells()).toHaveLength(0);
+    expect(host.querySelector('[data-action="save"]')).toBeNull();
+  });
+
+  it('keeps editing when the same row is clicked without a focus change', async () => {
+    const { row, api, host, saved } = await prepareRowExitTest();
+    const saveRow = vi.spyOn(component, 'saveRow');
+
+    host.querySelector<HTMLElement>('.ag-row[row-index="0"] [col-id="note"]')!.click();
+
+    await fixture.whenStable();
+    expect(saveRow).not.toHaveBeenCalled();
+    expect(saved).not.toHaveBeenCalled();
+    expect(api.getEditingCells()).toHaveLength(2);
+    component.cancelEdit(row);
+  });
+
   it.each([false, true])('saves when focus leaves the grid (server-side data: %s)', async (serverSide) => {
     const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+    const saveRow = vi.spyOn(component, 'saveRow');
     const outside = document.createElement('button');
     document.body.append(outside);
     try {
       outside.focus();
 
       await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+      expect(saveRow).toHaveBeenCalledExactlyOnceWith(row);
       expect(row.name).toBe('Updated');
       expect(api.getEditingCells()).toHaveLength(0);
       expect(host.querySelector('[data-action="save"]')).toBeNull();

@@ -24,6 +24,7 @@ import {
   CellValueChangedEvent,
   CellClickedEvent,
   RowEditingStoppedEvent,
+  RowClickedEvent,
   CellFocusedEvent,
   ICellRendererParams,
   ColumnApiModule,
@@ -571,16 +572,15 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.agGrid?.api?.stopEditing(false);
     this.rowSaved.emit(data);
     this.refreshGrid();
+    alert('saved successfully');
   }
 
   onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
-    if (!event.data || !this.editingRows.delete(event.data)) {
+    if (!event.data || !this.editingRows.has(event.data)) {
       return;
     }
 
-    this.editSnapshots.delete(event.data);
-    this.rowSaved.emit(event.data);
-    this.refreshGrid();
+    this.saveRow(event.data);
   }
 
   onCellFocused(event: CellFocusedEvent<TData>): void {
@@ -596,6 +596,16 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
     for (const data of this.editingRows) {
       if (data !== node?.data) {
+        this.saveRow(data);
+      }
+    }
+  }
+
+  onRowClicked(event: RowClickedEvent<TData>): void {
+    if (!this.enableActionButtons) return;
+
+    for (const data of this.editingRows) {
+      if (data !== event.data) {
         this.saveRow(data);
       }
     }
