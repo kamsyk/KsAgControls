@@ -44,6 +44,13 @@ describe('KsAgGridComponent', () => {
     expect(component.gridClass).toBe('ag-theme-quartz');
   });
 
+  it('keeps individual-cell editing when action buttons are disabled', () => {
+    fixture.componentRef.setInput('enableEditing', true);
+    fixture.detectChanges();
+    expect(component.agGrid.editType).toBeUndefined();
+    expect(component.agGrid.defaultColDef).toBe(component.defaultColDef);
+  });
+
   it('should use dark theme mode when themeMode is dark', () => {
     component.themeMode = 'dark';
     fixture.detectChanges();
@@ -197,15 +204,18 @@ describe('KsAgGridComponent', () => {
   });
 
   it('keeps focus in the action cell when refreshing replaces the activated button', () => {
+    mockGridApi();
     const { cell } = renderActions(actionRow);
-    const button = cell.querySelector<HTMLButtonElement>('button')!;
-    vi.spyOn(component, 'enterEditMode').mockImplementation(() => {
+    component.enterEditMode(actionRow);
+    cell.innerHTML = renderActions(actionRow).cell.innerHTML;
+    const saveButton = cell.querySelector<HTMLButtonElement>('[data-action="save"]')!;
+    vi.spyOn(component, 'saveRow').mockImplementation(() => {
       cell.innerHTML = '';
     });
     document.body.appendChild(cell);
     try {
-      button.focus();
-      clickAction(button.querySelector('path'));
+      saveButton.focus();
+      clickAction(saveButton.querySelector('path'));
       expect(document.activeElement).toBe(cell);
     } finally {
       cell.remove();
@@ -238,10 +248,82 @@ describe('KsAgGridComponent', () => {
       getRowNode: vi.fn(() => undefined),
       refreshCells: vi.fn(),
       stopEditing: vi.fn(),
+      forEachNode: vi.fn(),
     };
     component.agGrid = { api } as unknown as AgGridAngular;
     return api;
   }
+
+  it('opens every editable cell when Edit is clicked, and commits or cancels the row', async () => {
+    const row: GridRow = { id: 1, name: 'Ada', note: 'Original' };
+    fixture.componentRef.setInput('rowData', [row]);
+    fixture.componentRef.setInput('columnDefs', [
+      { field: 'id', editable: false },
+      { field: 'name' },
+      { field: 'note' },
+    ]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => {
+      expect(host.querySelector('[data-action="edit"]')).not.toBeNull();
+    });
+    const api = component.agGrid.api;
+    expect(api.getEditingCells()).toHaveLength(0);
+
+    host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
+    await vi.waitFor(() => {
+      expect(api.getEditingCells().map((cell) => cell.column?.getColId())).toEqual(['name', 'note']);
+    });
+    const nameInput = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    expect(nameInput).not.toBeNull();
+    expect(host.querySelector('[col-id="id"] input')).toBeNull();
+    expect(document.activeElement).toBe(nameInput);
+    nameInput.value = 'Grace';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    const saved = vi.fn();
+    component.rowSaved.subscribe(saved);
+    host.querySelector<HTMLButtonElement>('[data-action="save"]')!.click();
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(0));
+    expect(row.name).toBe('Grace');
+    expect(saved).toHaveBeenCalledWith(row);
+
+    host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(2));
+    const editInput = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    editInput.value = 'Discarded';
+    editInput.dispatchEvent(new Event('input', { bubbles: true }));
+    host.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.click();
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(0));
+    expect(row.name).toBe('Grace');
+    expect(saved).toHaveBeenCalledOnce();
+
+    component.addNewItem();
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(2));
+    expect(api.getEditingCells().every((cell) => cell.rowIndex === 0)).toBe(true);
+    api.stopEditing(true);
+  });
+
+  it('opens the requested row at its displayed index after sorting', async () => {
+    const row: GridRow = { id: 1, name: 'Zoe' };
+    fixture.componentRef.setInput('rowData', [row, { id: 2, name: 'Ada' }]);
+    fixture.componentRef.setInput('columnDefs', [
+      { field: 'id', editable: false },
+      { field: 'name', sort: 'asc' },
+      { field: 'note', editable: () => false },
+    ]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const api = component.agGrid.api;
+    await vi.waitFor(() => expect(api.getDisplayedRowAtIndex(1)?.data).toBe(row));
+
+    component.enterEditMode(row);
+
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(1));
+    expect(api.getEditingCells()[0].rowIndex).toBe(1);
+    expect(api.getEditingCells()[0].column?.getColId()).toBe('name');
+    component.cancelEdit(row);
+  });
 
   it('removes a client-side row by identity after the parent already spliced it out', () => {
     const api = mockGridApi();
@@ -359,6 +441,7 @@ function stubGridApi<TData>(component: KsAgGridComponent<TData>) {
     getRowNode: vi.fn().mockReturnValue(undefined),
     refreshCells: vi.fn(),
     stopEditing: vi.fn(),
+    forEachNode: vi.fn(),
   };
   component.agGrid = { api } as unknown as KsAgGridComponent['agGrid'];
   return api;

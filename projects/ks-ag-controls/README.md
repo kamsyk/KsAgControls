@@ -63,7 +63,11 @@ As before, `enableSettingsPersistence` displays Save Settings, Clear Settings,
 and Add New Item. Clear Settings removes the saved settings; it does not reset
 the current grid configuration. `enableActionButtons` displays Edit/Delete icons,
 replaced by Save/Cancel while editing. With only `enableRowDeletion`, the grid
-displays a single Delete icon. Existing outputs and editing behavior are unchanged.
+displays a single Delete icon. Clicking Edit immediately opens all editable cells
+in that row and focuses the first editable column. Columns configured with
+`editable: false` remain read-only. Save commits the row's open editors before
+emitting `rowSaved`; Cancel discards the edits. Without action buttons,
+`enableEditing` retains the normal individual-cell editing behavior.
 
 Row action buttons have accessible labels, native title tooltips, visible keyboard
 focus, and a minimum 32px target. Tab moves between actions before returning to

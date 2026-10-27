@@ -11,6 +11,7 @@ import {
 import { AgGridAngular, AgGridModule } from 'ag-grid-angular';
 import {
   ClientSideRowModelModule,
+  ClientSideRowModelApiModule,
   ColDef,
   ColumnState,
   IDatasource,
@@ -23,6 +24,15 @@ import {
   CellValueChangedEvent,
   CellClickedEvent,
   ICellRendererParams,
+  ColumnApiModule,
+  RowApiModule,
+  ScrollApiModule,
+  RenderApiModule,
+  TextEditorModule,
+  NumberEditorModule,
+  DateEditorModule,
+  CheckboxEditorModule,
+  CustomEditorModule,
 } from 'ag-grid-community';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { KsIconComponent } from '../ks-icon/ks-icon.component';
@@ -145,7 +155,12 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   get theme(): Theme {
     return this.themeMode === 'dark' ? this.darkTheme : this.lightTheme;
   }
-  readonly modules: Module[] = [ClientSideRowModelModule, InfiniteRowModelModule];
+  readonly modules: Module[] = [
+    ClientSideRowModelModule, ClientSideRowModelApiModule, InfiniteRowModelModule,
+    ColumnApiModule, RowApiModule, ScrollApiModule, RenderApiModule,
+    TextEditorModule, NumberEditorModule, DateEditorModule, CheckboxEditorModule,
+    CustomEditorModule,
+  ];
 
   get defaultColDef(): ColDef<TData> {
     const key = `${this.enableActionButtons}:${this.enableEditing}`;
@@ -291,7 +306,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         break;
     }
     // Refreshing replaces the buttons; keep keyboard focus in the surviving cell.
-    if (restoreFocus && action !== 'delete') {
+    if (restoreFocus && action !== 'delete' && action !== 'edit') {
       cell?.focus();
     }
   }
@@ -510,22 +525,6 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       // Enter edit mode for the new row
       this.enterEditMode(newItem);
 
-      // Scroll to the new row (it's at index 0)
-      this.agGrid.api.ensureIndexVisible(0, 'top');
-
-      // Focus on the first editable cell
-      const firstEditableCol = this.columnDefs?.find(col => col.field && col.editable !== false);
-      if (firstEditableCol && firstEditableCol.field) {
-        // Set focus and start editing
-        setTimeout(() => {
-          this.agGrid.api.setFocusedCell(0, firstEditableCol.field as string);
-          this.agGrid.api.startEditingCell({
-            rowIndex: 0,
-            colKey: firstEditableCol.field as string,
-          });
-        }, 100);
-      }
-
       // Emit event for parent component awareness
       this.addItem.emit();
     }
@@ -538,6 +537,22 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.captureEditSnapshot(data);
     this.editingRows.add(data);
     this.refreshGrid();
+
+    const api = this.agGrid?.api;
+    if (!api) {
+      console.warn('AG Grid API not available');
+      return;
+    }
+
+    // Row indices can differ from rowData order after sorting or pagination.
+    api.forEachNode((node) => {
+      if (node.data !== data || node.rowIndex == null) return;
+      const column = api.getAllDisplayedColumns().find((col) => col.isCellEditable(node));
+      if (!column) return;
+
+      api.ensureIndexVisible(node.rowIndex);
+      api.startEditingCell({ rowIndex: node.rowIndex, colKey: column });
+    });
   }
 
   /**
