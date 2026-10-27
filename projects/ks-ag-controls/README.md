@@ -66,7 +66,10 @@ replaced by Save/Cancel while editing. With only `enableRowDeletion`, the grid
 displays a single Delete icon. Clicking Edit immediately opens all editable cells
 in that row and focuses the first editable column. Columns configured with
 `editable: false` remain read-only. Save commits the row's open editors before
-emitting `rowSaved`; Cancel discards the edits. Without action buttons,
+emitting `rowSaved`. Moving to another row or leaving the grid also commits the
+open editors, emits `rowSaved` once, and restores the normal Edit/Delete actions.
+Moving between cells or action buttons within the same row keeps it in edit mode.
+Cancel or Escape discards the edits without emitting `rowSaved`. Without action buttons,
 `enableEditing` retains the normal individual-cell editing behavior.
 
 Row action buttons have accessible labels, native title tooltips, visible keyboard

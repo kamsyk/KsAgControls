@@ -29,6 +29,7 @@
     [columnDefs]="effectiveColumnDefs"
     [defaultColDef]="defaultColDef"
     [editType]="enableActionButtons ? 'fullRow' : undefined"
+    [stopEditingWhenCellsLoseFocus]="enableActionButtons"
     domLayout="autoHeight"
     [pagination]="true"
     [paginationPageSize]="pageSize"
@@ -37,6 +38,9 @@
     [animateRows]="true"
     [loading]="loading"
     (gridReady)="onGridReady()"
+    (keydown.escape)="onEditEscape()"
+    (rowEditingStopped)="onRowEditingStopped($event)"
+    (cellFocused)="onCellFocused($event)"
     (cellValueChanged)="onCellValueChanged($event)">
   </ag-grid-angular>
 </div>

@@ -23,6 +23,8 @@ import {
   themeQuartz,
   CellValueChangedEvent,
   CellClickedEvent,
+  RowEditingStoppedEvent,
+  CellFocusedEvent,
   ICellRendererParams,
   ColumnApiModule,
   RowApiModule,
@@ -534,6 +536,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Enter edit mode for a row
    */
   enterEditMode(data: TData): void {
+    for (const editingData of this.editingRows) {
+      if (editingData !== data) {
+        this.saveRow(editingData);
+      }
+    }
     this.captureEditSnapshot(data);
     this.editingRows.add(data);
     this.refreshGrid();
@@ -559,24 +566,56 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
    * Save row changes and exit edit mode
    */
   saveRow(data: TData): void {
-    // Commit an open editor before publishing the row. Clicking Save does not
-    // blur the editor when stopEditingWhenCellsLoseFocus is left at its default.
-    this.agGrid?.api?.stopEditing(false);
     this.editSnapshots.delete(data);
     this.editingRows.delete(data);
+    this.agGrid?.api?.stopEditing(false);
     this.rowSaved.emit(data);
     this.refreshGrid();
+  }
+
+  onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
+    if (!event.data || !this.editingRows.delete(event.data)) {
+      return;
+    }
+
+    this.editSnapshots.delete(event.data);
+    this.rowSaved.emit(event.data);
+    this.refreshGrid();
+  }
+
+  onCellFocused(event: CellFocusedEvent<TData>): void {
+    if (!this.enableActionButtons || !this.editingRows.size) {
+      return;
+    }
+
+    const focused = event.api.getFocusedCell();
+    const node = focused == null ? undefined
+      : focused.rowPinned === 'bottom' ? event.api.getPinnedBottomRow(focused.rowIndex)
+      : focused.rowPinned === 'top' ? event.api.getPinnedTopRow(focused.rowIndex)
+      : event.api.getDisplayedRowAtIndex(focused.rowIndex);
+
+    for (const data of this.editingRows) {
+      if (data !== node?.data) {
+        this.saveRow(data);
+      }
+    }
+  }
+
+  onEditEscape(): void {
+    for (const data of this.editingRows) {
+      this.cancelEdit(data);
+    }
   }
 
   /**
    * Cancel editing, discard changes made since edit mode started, and exit edit mode.
    */
   cancelEdit(data: TData): void {
+    this.editingRows.delete(data);
     // Discard the active editor before restoring, so it cannot commit over the snapshot.
     this.agGrid?.api?.stopEditing(true);
     this.restoreEditSnapshot(data);
     this.editSnapshots.delete(data);
-    this.editingRows.delete(data);
     if (!this.useServerSideData && this.agGrid?.api) {
       this.agGrid.api.applyTransaction({ update: [data] });
     }

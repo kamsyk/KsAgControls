@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AgGridAngular } from 'ag-grid-angular';
-import { CellClickedEvent } from 'ag-grid-community';
+import { AllCommunityModule, CellClickedEvent, IGetRowsParams, ModuleRegistry } from 'ag-grid-community';
 
 import { KsAgGridComponent } from './ks-ag-grid.component';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 interface GridRow {
   id: number;
@@ -323,6 +325,140 @@ describe('KsAgGridComponent', () => {
     expect(api.getEditingCells()[0].rowIndex).toBe(1);
     expect(api.getEditingCells()[0].column?.getColId()).toBe('name');
     component.cancelEdit(row);
+  });
+
+  async function prepareRowExitTest(serverSide = false) {
+    const row: GridRow = { id: 1, name: 'Ada', note: 'Original' };
+    const otherRow: GridRow = { id: 2, name: 'Grace' };
+    fixture.componentRef.setInput('rowData', [row, otherRow]);
+    if (serverSide) {
+      fixture.componentRef.setInput('useServerSideData', true);
+      fixture.componentRef.setInput('serverDataSource', {
+        getRows: (params: IGetRowsParams) => params.successCallback([row, otherRow], 2),
+      });
+    }
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }, { field: 'note' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const api = component.agGrid.api;
+    await vi.waitFor(() => expect(api.getDisplayedRowAtIndex(0)?.data).toBe(row));
+    component.enterEditMode(row);
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(2));
+    const host = fixture.nativeElement as HTMLElement;
+    const input = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    input.value = 'Updated';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const saved = vi.fn();
+    component.rowSaved.subscribe(saved);
+    return { row, api, host, input, saved };
+  }
+
+  it.each([false, true])('saves once on row exit (server-side data: %s)', async (serverSide) => {
+    const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+
+    api.setFocusedCell(1, 'name');
+
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+    expect(row.name).toBe('Updated');
+    expect(api.getEditingCells()).toHaveLength(0);
+    expect(host.querySelector('[data-action="save"]')).toBeNull();
+    expect(host.querySelectorAll('[data-action="edit"]')).toHaveLength(2);
+  });
+
+  it.each([false, true])('saves when focus leaves the grid (server-side data: %s)', async (serverSide) => {
+    const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    try {
+      outside.focus();
+
+      await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+      expect(row.name).toBe('Updated');
+      expect(api.getEditingCells()).toHaveLength(0);
+      expect(host.querySelector('[data-action="save"]')).toBeNull();
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it('keeps editing when focus moves between cells in the same row', async () => {
+    const { api, host, saved } = await prepareRowExitTest();
+
+    host.querySelector<HTMLInputElement>('[col-id="note"] input')!.focus();
+    api.setFocusedCell(0, 'note');
+    await fixture.whenStable();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(api.getEditingCells()).toHaveLength(2);
+    component.cancelEdit(api.getDisplayedRowAtIndex(0)!.data);
+  });
+
+  it('discards edits without saving when Escape is pressed', async () => {
+    const { row, api, input, saved } = await prepareRowExitTest();
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(0));
+    await fixture.whenStable();
+    expect(saved).not.toHaveBeenCalled();
+    expect(row.name).toBe('Ada');
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[data-action="save"]')).toBeNull();
+  });
+
+  it('saves the previous row once when another row enters edit mode', async () => {
+    const { row, api, saved } = await prepareRowExitTest();
+    const otherRow: GridRow = api.getDisplayedRowAtIndex(1)!.data;
+
+    component.enterEditMode(otherRow);
+
+    await vi.waitFor(() => {
+      expect(saved).toHaveBeenCalledExactlyOnceWith(row);
+      expect(api.getEditingCells()).toHaveLength(2);
+      expect(api.getEditingCells().every((cell) => cell.rowIndex === 1)).toBe(true);
+    });
+    expect(row.name).toBe('Updated');
+    component.cancelEdit(otherRow);
+    await fixture.whenStable();
+    expect(saved).toHaveBeenCalledOnce();
+  });
+
+  it('does not auto-save before the Cancel button can discard changes', async () => {
+    const { row, api, host, saved } = await prepareRowExitTest();
+    const cancel = host.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+
+    cancel.focus();
+    cancel.click();
+
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(0));
+    await fixture.whenStable();
+    expect(row.name).toBe('Ada');
+    expect(saved).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-action="save"]')).toBeNull();
+  });
+
+  it('saves a pinned new row on exit without confusing its index with a normal row', async () => {
+    const { row, api, saved } = await prepareRowExitTest();
+    component.cancelEdit(row);
+    await fixture.whenStable();
+    const newRow: GridRow = { id: 0, name: '' };
+    api.setGridOption('pinnedBottomRowData', [newRow]);
+    component.enterEditMode(newRow);
+    api.setFocusedCell(0, 'name', 'bottom');
+    api.startEditingCell({ rowIndex: 0, colKey: 'name', rowPinned: 'bottom' });
+    await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(2));
+    const host = fixture.nativeElement as HTMLElement;
+    const input = host.querySelector<HTMLInputElement>('.ag-row-pinned [col-id="name"] input')!;
+    input.value = 'New row';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(saved).not.toHaveBeenCalled();
+
+    api.setFocusedCell(0, 'name');
+
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(newRow));
+    expect(newRow.name).toBe('New row');
+    expect(api.getEditingCells()).toHaveLength(0);
   });
 
   it('removes a client-side row by identity after the parent already spliced it out', () => {
