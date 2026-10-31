@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   EventEmitter,
@@ -83,6 +84,7 @@ export interface KsAgGridState {
   selector: 'lib-ks-ag-grid',
   imports: [AgGridModule, KsIconComponent],
   templateUrl: './ks-ag-grid.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
 })

@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatLabel, MatFormField } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -33,6 +33,7 @@ export type KsLoginStyles = Record<string, string>;
     NgStyle,
   ],
   templateUrl: './ks-login.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ks-login.component.scss',
 })
 export class KsLoginComponent {

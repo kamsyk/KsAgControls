@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 
@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
   selector: 'lib-ks-button',
   imports: [MatButtonModule],
   templateUrl: './ks-button.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ks-button.component.scss',
 })
 export class KsButtonComponent {

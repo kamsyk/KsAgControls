@@ -1,9 +1,10 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { KS_ICONS, KsIconName } from './ks-icons';
 
 @Component({
   selector: 'lib-ks-icon',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <svg [attr.viewBox]="icon().viewBox" aria-hidden="true" focusable="false">
       <path [attr.d]="icon().path" />
