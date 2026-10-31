@@ -566,12 +566,16 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       const column = api.getAllDisplayedColumns().find((col) => col.isCellEditable(node));
       if (!column) return;
 
+      const rowPinned = node.rowPinned ?? undefined;
       api.ensureIndexVisible(node.rowIndex);
-      api.startEditingCell({
-        rowIndex: node.rowIndex,
-        colKey: column,
-        rowPinned: node.rowPinned ?? undefined,
-      });
+      // The action column suppresses mouse handling, so an Edit click leaves grid
+      // focus on the previously focused row. Full-row editing stops whenever focus
+      // moves in from another row, so the next click inside this row would close it.
+      const focused = api.getFocusedCell();
+      if (focused && this.getRowNodeForFocus(api, focused.rowIndex, focused.rowPinned) !== node) {
+        api.setFocusedCell(node.rowIndex, column, rowPinned);
+      }
+      api.startEditingCell({ rowIndex: node.rowIndex, colKey: column, rowPinned });
     });
   }
 
@@ -729,7 +733,9 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       return;
     }
 
-    this.agGrid?.api?.stopEditing(false);
+    const api = this.agGrid?.api;
+    api?.clearFocusedCell();
+    api?.stopEditing(false);
   }
 
   private getRowNodeForFocus(
