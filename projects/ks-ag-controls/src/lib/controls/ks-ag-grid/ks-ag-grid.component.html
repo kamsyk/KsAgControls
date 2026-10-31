@@ -11,10 +11,29 @@
           Clear Settings
         </button>
       </div>
-      <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
-        <lib-ks-icon name="add" />
-        Add New Item
+      <div class="grid-toolbar-actions" role="group" aria-label="Grid actions">
+        <button type="button" class="grid-toolbar-button" (click)="refreshData()">
+          <lib-ks-icon name="refresh" />
+          Refresh
       </button>
+        <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
+          <lib-ks-icon name="add" />
+          Add New Item
+        </button>
+    </div>
+</div>
+  } @else {
+    <div class="grid-toolbar">
+      <div class="grid-toolbar-actions" role="group" aria-label="Grid actions">
+        <button type="button" class="grid-toolbar-button" (click)="refreshData()">
+          <lib-ks-icon name="refresh" />
+          Refresh
+        </button>
+        <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
+          <lib-ks-icon name="add" />
+          Add New Item
+        </button>
+      </div>
     </div>
   }
 
@@ -45,3 +64,4 @@
     (cellValueChanged)="onCellValueChanged($event)">
   </ag-grid-angular>
 </div>
+

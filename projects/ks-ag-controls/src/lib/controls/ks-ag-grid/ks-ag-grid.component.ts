@@ -572,7 +572,6 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.agGrid?.api?.stopEditing(false);
     this.rowSaved.emit(data);
     this.refreshGrid();
-    alert('saved successfully');
   }
 
   onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
@@ -700,6 +699,23 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         oldValue: event.oldValue,
         newValue: event.newValue,
       });
+    }
+  }
+
+  /**
+   * Refresh the grid data
+   */
+  refreshData(): void {
+    if (this.agGrid?.api) {
+      // If using server-side data, refresh the datasource
+      if (this.useServerSideData && this.datasource) {
+        // Objects set through the API always notify, so the same datasource reloads.
+        this.agGrid.api.setGridOption('datasource', this.datasource);
+      } else if (!this.useServerSideData && this.rowData) {
+        // For client-side data, refresh the grid
+        this.agGrid.api.refreshCells({ force: true });
+        this.agGrid.api.redrawRows();
+      }
     }
   }
 
