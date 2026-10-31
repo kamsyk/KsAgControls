@@ -24,6 +24,7 @@ import {
   CellValueChangedEvent,
   CellClickedEvent,
   RowEditingStoppedEvent,
+  RowValueChangedEvent,
   RowClickedEvent,
   CellFocusedEvent,
   ICellRendererParams,
@@ -118,6 +119,8 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Output() cellValueChanged = new EventEmitter<{ data: TData; field: string; oldValue: unknown; newValue: unknown }>();
 
   private editingRows = new Set<TData>();
+  /** Collapses saveRow + rowValueChanged into a single rowSaved emit per stop. */
+  private rowSaveEmitted = false;
   /** Values captured when a row enters edit mode, so Cancel can discard edits. */
   private editSnapshots = new Map<TData, Record<string, unknown>>();
 
@@ -570,16 +573,36 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.editSnapshots.delete(data);
     this.editingRows.delete(data);
     this.agGrid?.api?.stopEditing(false);
-    this.rowSaved.emit(data);
+    if (!this.rowSaveEmitted) {
+      this.rowSaveEmitted = true;
+      this.rowSaved.emit(data);
+    }
     this.refreshGrid();
   }
 
-  onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
-    if (!event.data || !this.editingRows.has(event.data)) {
+  onRowValueChanged(event: RowValueChangedEvent<TData>): void {
+    if (!event.data || !this.enableActionButtons) {
       return;
     }
 
+    // Do not gate on editingRows: saveRow / stopEditing may already have cleared it.
     this.saveRow(event.data);
+  }
+
+  onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
+    this.rowSaveEmitted = false;
+
+    if (event.data && this.editingRows.has(event.data)) {
+      // No value changes — leave edit mode without emitting rowSaved.
+      this.editSnapshots.delete(event.data);
+      this.editingRows.delete(event.data);
+    } else if (this.editingRows.size && event.api.getEditingCells().length === 0) {
+      // Identity mismatch between event.data and the tracked row object.
+      this.editingRows.clear();
+      this.editSnapshots.clear();
+    }
+
+    this.refreshGrid();
   }
 
   onCellFocused(event: CellFocusedEvent<TData>): void {
@@ -595,17 +618,22 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
 
     for (const data of this.editingRows) {
       if (data !== node?.data) {
-        this.saveRow(data);
+        // Let rowValueChanged / rowEditingStopped finish the save or cleanup.
+        event.api.stopEditing(false);
+        return;
       }
     }
   }
 
   onRowClicked(event: RowClickedEvent<TData>): void {
-    if (!this.enableActionButtons) return;
+    if (!this.enableActionButtons || !this.editingRows.size) {
+      return;
+    }
 
     for (const data of this.editingRows) {
       if (data !== event.data) {
-        this.saveRow(data);
+        event.api.stopEditing(false);
+        return;
       }
     }
   }
