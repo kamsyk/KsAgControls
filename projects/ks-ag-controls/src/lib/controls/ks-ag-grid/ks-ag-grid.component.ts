@@ -1,6 +1,8 @@
 import {
   Component,
+  ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
   OnInit,
@@ -23,7 +25,9 @@ import {
   themeQuartz,
   CellValueChangedEvent,
   CellClickedEvent,
+  RowEditingStartedEvent,
   RowEditingStoppedEvent,
+  RowValueChangedEvent,
   RowClickedEvent,
   CellFocusedEvent,
   ICellRendererParams,
@@ -84,6 +88,7 @@ export interface KsAgGridState {
 })
 export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
+  @ViewChild(AgGridAngular, { read: ElementRef }) private agGridEl?: ElementRef<HTMLElement>;
 
   @Input() rowData: TData[] | null | undefined = [];
   @Input() columnDefs: ColDef<TData>[] | null = [];
@@ -545,10 +550,13 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.captureEditSnapshot(data);
     this.editingRows.add(data);
     this.refreshGrid();
+    this.startEditorsForRow(data);
+  }
 
+  /** Open full-row editors for an already-tracked edit row. */
+  private startEditorsForRow(data: TData): void {
     const api = this.agGrid?.api;
     if (!api) {
-      console.warn('AG Grid API not available');
       return;
     }
 
@@ -558,8 +566,16 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       const column = api.getAllDisplayedColumns().find((col) => col.isCellEditable(node));
       if (!column) return;
 
+      const rowPinned = node.rowPinned ?? undefined;
       api.ensureIndexVisible(node.rowIndex);
-      api.startEditingCell({ rowIndex: node.rowIndex, colKey: column });
+      // The action column suppresses mouse handling, so an Edit click leaves grid
+      // focus on the previously focused row. Full-row editing stops whenever focus
+      // moves in from another row, so the next click inside this row would close it.
+      const focused = api.getFocusedCell();
+      if (focused && this.getRowNodeForFocus(api, focused.rowIndex, focused.rowPinned) !== node) {
+        api.setFocusedCell(node.rowIndex, column, rowPinned);
+      }
+      api.startEditingCell({ rowIndex: node.rowIndex, colKey: column, rowPinned });
     });
   }
 
@@ -574,12 +590,62 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.refreshGrid();
   }
 
-  onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
-    if (!event.data || !this.editingRows.has(event.data)) {
+  onRowEditingStarted(event: RowEditingStartedEvent<TData>): void {
+    if (!event.data || !this.enableActionButtons) {
       return;
     }
 
+    // Track the row and refresh actions so Save/Cancel replace Edit/Delete.
+    if (!this.editingRows.has(event.data)) {
+      this.captureEditSnapshot(event.data);
+      this.editingRows.add(event.data);
+    }
+    this.refreshGrid();
+  }
+
+  onRowValueChanged(event: RowValueChangedEvent<TData>): void {
+    if (!event.data || !this.enableActionButtons || !this.editingRows.has(event.data)) {
+      return;
+    }
+
+    // Editors can briefly stop while focus moves between cells in the same row.
+    // Values are already applied to the row; reopen editors instead of saving.
+    if (this.isFocusOnEditingData(event.api, event.data)) {
+      queueMicrotask(() => {
+        if (this.editingRows.has(event.data!)) {
+          this.startEditorsForRow(event.data!);
+        }
+      });
+      return;
+    }
+
+    // Focus/click handlers only stopEditing, so the row is still tracked here.
+    // saveRow itself clears editingRows first, so button-triggered saves do not double-emit.
     this.saveRow(event.data);
+  }
+
+  onRowEditingStopped(event: RowEditingStoppedEvent<TData>): void {
+    if (event.data && this.editingRows.has(event.data)) {
+      // Same-row focus flicker can stop editors; reopen instead of exiting.
+      if (this.isFocusOnEditingData(event.api, event.data)) {
+        queueMicrotask(() => {
+          if (this.editingRows.has(event.data!)) {
+            this.startEditorsForRow(event.data!);
+          }
+        });
+        return;
+      }
+
+      // No value changes — leave edit mode without emitting rowSaved.
+      this.editSnapshots.delete(event.data);
+      this.editingRows.delete(event.data);
+    } else if (this.editingRows.size && event.api.getEditingCells().length === 0) {
+      // Identity mismatch between event.data and the tracked row object.
+      this.editingRows.clear();
+      this.editSnapshots.clear();
+    }
+
+    this.refreshGrid();
   }
 
   onCellFocused(event: CellFocusedEvent<TData>): void {
@@ -588,26 +654,113 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     }
 
     const focused = event.api.getFocusedCell();
-    const node = focused == null ? undefined
-      : focused.rowPinned === 'bottom' ? event.api.getPinnedBottomRow(focused.rowIndex)
-      : focused.rowPinned === 'top' ? event.api.getPinnedTopRow(focused.rowIndex)
-      : event.api.getDisplayedRowAtIndex(focused.rowIndex);
+    // Ignore cleared-focus events; leaving the grid is handled separately.
+    // Treating null as "left the row" falsely stops edit when clicking cells
+    // in the same row (focus briefly clears before landing on the new cell).
+    if (focused == null) {
+      return;
+    }
 
+    const node = this.getRowNodeForFocus(event.api, focused.rowIndex, focused.rowPinned);
     for (const data of this.editingRows) {
       if (data !== node?.data) {
-        this.saveRow(data);
+        // Let rowValueChanged / rowEditingStopped finish the save or cleanup.
+        event.api.stopEditing(false);
+        return;
       }
     }
   }
 
   onRowClicked(event: RowClickedEvent<TData>): void {
-    if (!this.enableActionButtons) return;
-
-    for (const data of this.editingRows) {
-      if (data !== event.data) {
-        this.saveRow(data);
-      }
+    if (!this.enableActionButtons || !event.data) {
+      return;
     }
+
+    const target = event.event?.target;
+    if (target instanceof Element && target.closest('.ks-grid-action-cell, button[data-action], .ks-grid-row-actions')) {
+      return;
+    }
+
+    // Already editing this row — keep editors open (same-row cell click).
+    if (this.editingRows.has(event.data)) {
+      return;
+    }
+
+    // Clicking a cell/row enters edit mode (and saves any other open edit).
+    this.enterEditMode(event.data);
+  }
+
+  /**
+   * Commit the open edit when keyboard focus leaves the grid for a focusable
+   * target outside it. Clicks on non-focusable areas are handled by mousedown.
+   */
+  onGridFocusOut(event: FocusEvent): void {
+    if (!this.enableActionButtons || !this.editingRows.size) {
+      return;
+    }
+
+    const next = event.relatedTarget;
+    if (!(next instanceof Node)) {
+      return;
+    }
+
+    const gridRoot = this.agGridEl?.nativeElement;
+    if (gridRoot?.contains(next)) {
+      return;
+    }
+
+    this.agGrid?.api?.stopEditing(false);
+  }
+
+  /**
+   * Commit the open edit when the user clicks outside the grid. Needed because
+   * stopEditingWhenCellsLoseFocus also stops on same-row cell clicks (cells use
+   * tabindex=-1 / null relatedTarget during mousedown).
+   */
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentMouseDown(event: MouseEvent): void {
+    if (!this.enableActionButtons || !this.editingRows.size) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    const gridRoot = this.agGridEl?.nativeElement;
+    if (!gridRoot || gridRoot.contains(target)) {
+      return;
+    }
+
+    const api = this.agGrid?.api;
+    api?.clearFocusedCell();
+    api?.stopEditing(false);
+  }
+
+  private getRowNodeForFocus(
+    api: CellFocusedEvent<TData>['api'],
+    rowIndex: number,
+    rowPinned: string | null | undefined,
+  ) {
+    if (rowPinned === 'bottom') {
+      return api.getPinnedBottomRow(rowIndex);
+    }
+    if (rowPinned === 'top') {
+      return api.getPinnedTopRow(rowIndex);
+    }
+    return api.getDisplayedRowAtIndex(rowIndex);
+  }
+
+  private isFocusOnEditingData(
+    api: CellFocusedEvent<TData>['api'],
+    data: TData,
+  ): boolean {
+    const focused = api.getFocusedCell();
+    if (focused == null) {
+      return false;
+    }
+    return this.getRowNodeForFocus(api, focused.rowIndex, focused.rowPinned)?.data === data;
   }
 
   onEditEscape(): void {
@@ -680,12 +833,13 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   }
 
   /**
-   * Refresh the grid to update cell renderers
+   * Refresh action-button cell renderers without destroying open editors.
    */
   private refreshGrid(): void {
-    if (this.agGrid?.api) {
-      this.agGrid.api.refreshCells({ force: true });
-    }
+    this.agGrid?.api?.refreshCells({
+      columns: ['ks-ag-grid-actions'],
+      force: true,
+    });
   }
 
   /**

@@ -254,6 +254,7 @@ describe('KsAgGridComponent', () => {
       applyTransaction: vi.fn(() => ({ add: [], remove: [], update: [] })),
       getRowNode: vi.fn(() => undefined),
       refreshCells: vi.fn(),
+      redrawRows: vi.fn(),
       stopEditing: vi.fn(),
       forEachNode: vi.fn(),
     };
@@ -281,6 +282,11 @@ describe('KsAgGridComponent', () => {
     host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
     await vi.waitFor(() => {
       expect(api.getEditingCells().map((cell) => cell.column?.getColId())).toEqual(['name', 'note']);
+    });
+    await vi.waitFor(() => {
+      expect(host.querySelector('[data-action="save"]')).not.toBeNull();
+      expect(host.querySelector('[data-action="cancel"]')).not.toBeNull();
+      expect(host.querySelector('[data-action="edit"]')).toBeNull();
     });
     const nameInput = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
     expect(nameInput).not.toBeNull();
@@ -383,7 +389,7 @@ describe('KsAgGridComponent', () => {
     expect(host.querySelectorAll('[data-action="edit"]')).toHaveLength(2);
   });
 
-  it.each([false, true])('calls saveRow when another row is clicked without a focus change (server-side data: %s)', async (serverSide) => {
+  it.each([false, true])('saves the previous row and edits the clicked row (server-side data: %s)', async (serverSide) => {
     const { row, api, host, saved } = await prepareRowExitTest(serverSide);
     const saveRow = vi.spyOn(component, 'saveRow');
     const payloads: string[] = [];
@@ -394,10 +400,82 @@ describe('KsAgGridComponent', () => {
     cell.click();
 
     await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
-    expect(saveRow).toHaveBeenCalledExactlyOnceWith(row);
+    expect(saveRow).toHaveBeenCalledWith(row);
     expect(payloads).toEqual([JSON.stringify({ id: 1, name: 'Updated', note: 'Original' })]);
-    expect(api.getEditingCells()).toHaveLength(0);
-    expect(host.querySelector('[data-action="save"]')).toBeNull();
+    await vi.waitFor(() => {
+      expect(api.getEditingCells().length).toBeGreaterThan(0);
+      expect(api.getEditingCells().every((editingCell) => editingCell.rowIndex === 1)).toBe(true);
+    });
+    expect(host.querySelector('.ag-row[row-index="1"] [data-action="save"]')).not.toBeNull();
+    expect(host.querySelector('.ag-row[row-index="0"] [data-action="edit"]')).not.toBeNull();
+  });
+
+  it('keeps a row opened by the Edit button in edit mode when its cell is clicked after editing another row', async () => {
+    const row1: GridRow = { id: 1, name: 'Ada', note: 'Original' };
+    const row2: GridRow = { id: 2, name: 'Grace', note: 'Other' };
+    fixture.componentRef.setInput('rowData', [row1, row2]);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }, { field: 'note' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const api = component.agGrid.api;
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+    const realClick = (el: Element) => {
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      (el as HTMLElement).click();
+    };
+    const cell = (rowIndex: number, colId: string) =>
+      host.querySelector<HTMLElement>(`.ag-row[row-index="${rowIndex}"] [col-id="${colId}"]`)!;
+
+    realClick(cell(0, 'name'));
+    await vi.waitFor(() => expect(api.getEditingCells().every((c) => c.rowIndex === 0)).toBe(true));
+
+    realClick(cell(1, 'name'));
+    await vi.waitFor(() => {
+      expect(api.getEditingCells().length).toBeGreaterThan(0);
+      expect(api.getEditingCells().every((c) => c.rowIndex === 1)).toBe(true);
+    });
+    // Browsers keep grid focus on row 2 here; happy-dom can drop it.
+    api.setFocusedCell(1, 'name');
+
+    realClick(cell(0, 'ks-ag-grid-actions').querySelector('[data-action="edit"]')!);
+    await vi.waitFor(() => {
+      expect(api.getEditingCells().length).toBeGreaterThan(0);
+      expect(api.getEditingCells().every((c) => c.rowIndex === 0)).toBe(true);
+    });
+    // Full-row editing closes when grid focus enters the row from another row.
+    expect(api.getFocusedCell()?.rowIndex).toBe(0);
+
+    realClick(cell(0, 'note'));
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(api.getEditingCells().map((c) => c.column?.getColId())).toEqual(['name', 'note']);
+    expect(api.getEditingCells().every((c) => c.rowIndex === 0)).toBe(true);
+    expect(host.querySelector('.ag-row[row-index="0"] [data-action="save"]')).not.toBeNull();
+    component.cancelEdit(row1);
+  });
+
+  it('enters edit mode when a cell is clicked', async () => {
+    const row: GridRow = { id: 1, name: 'Ada', note: 'Original' };
+    fixture.componentRef.setInput('rowData', [row, { id: 2, name: 'Grace' }]);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }, { field: 'note' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const api = component.agGrid.api;
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+
+    host.querySelector<HTMLElement>('.ag-row[row-index="0"] [col-id="name"]')!.click();
+
+    await vi.waitFor(() => {
+      expect(api.getEditingCells().map((cell) => cell.column?.getColId())).toEqual(['name', 'note']);
+      expect(host.querySelector('.ag-row[row-index="0"] [data-action="save"]')).not.toBeNull();
+      expect(host.querySelector('.ag-row[row-index="0"] [data-action="cancel"]')).not.toBeNull();
+      expect(host.querySelector('.ag-row[row-index="0"] [data-action="edit"]')).toBeNull();
+    });
+    component.cancelEdit(row);
   });
 
   it('keeps editing when the same row is clicked without a focus change', async () => {
@@ -410,6 +488,25 @@ describe('KsAgGridComponent', () => {
     expect(saveRow).not.toHaveBeenCalled();
     expect(saved).not.toHaveBeenCalled();
     expect(api.getEditingCells()).toHaveLength(2);
+    component.cancelEdit(row);
+  });
+
+  it('keeps editing when mousedown moves focus between cells in the edited row', async () => {
+    const { row, api, host, saved } = await prepareRowExitTest();
+    const saveRow = vi.spyOn(component, 'saveRow');
+    const noteCell = host.querySelector<HTMLElement>('.ag-row[row-index="0"] [col-id="note"]')!;
+
+    // Mimic a real cell click: mousedown can clear focus before the new cell is focused.
+    noteCell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    noteCell.click();
+    api.setFocusedCell(0, 'note');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(api.getEditingCells().length).toBeGreaterThan(0));
+
+    expect(saveRow).not.toHaveBeenCalled();
+    expect(saved).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-action="save"]')).not.toBeNull();
+    expect(api.getEditingCells().every((cell) => cell.rowIndex === 0)).toBe(true);
     component.cancelEdit(row);
   });
 
@@ -426,6 +523,37 @@ describe('KsAgGridComponent', () => {
       expect(row.name).toBe('Updated');
       expect(api.getEditingCells()).toHaveLength(0);
       expect(host.querySelector('[data-action="save"]')).toBeNull();
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it.each([false, true])('saves and can reopen after a non-focusable outside click (server-side data: %s)', async (serverSide) => {
+    const { row, api, host, saved } = await prepareRowExitTest(serverSide);
+    const outside = document.createElement('div');
+    document.body.append(outside);
+    try {
+      api.setFocusedCell(0, 'name');
+      outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
+      expect(row.name).toBe('Updated');
+      expect(api.getEditingCells()).toHaveLength(0);
+      expect(host.querySelector('[data-action="save"]')).toBeNull();
+      expect(api.getFocusedCell()).toBeNull();
+
+      host.querySelector<HTMLButtonElement>('.ag-row[row-index="0"] [data-action="edit"]')!.click();
+      await vi.waitFor(() => expect(api.getEditingCells()).toHaveLength(2));
+      const cell = host.querySelector<HTMLElement>('.ag-row[row-index="0"] [col-id="name"]')!;
+      cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      cell.click();
+      await fixture.whenStable();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      expect(api.getEditingCells()).toHaveLength(2);
+      expect(host.querySelector('.ag-row[row-index="0"] [data-action="save"]')).not.toBeNull();
+      expect(saved).toHaveBeenCalledOnce();
+      component.cancelEdit(row);
     } finally {
       outside.remove();
     }
@@ -504,9 +632,11 @@ describe('KsAgGridComponent', () => {
     await fixture.whenStable();
     expect(saved).not.toHaveBeenCalled();
 
+    saved.mockClear();
     api.setFocusedCell(0, 'name');
 
-    await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(newRow));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledWith(newRow));
+    expect(saved).toHaveBeenCalledTimes(1);
     expect(newRow.name).toBe('New row');
     expect(api.getEditingCells()).toHaveLength(0);
   });
@@ -626,6 +756,7 @@ function stubGridApi<TData>(component: KsAgGridComponent<TData>) {
     applyTransaction: vi.fn().mockReturnValue({ remove: [{}], add: [], update: [] }),
     getRowNode: vi.fn().mockReturnValue(undefined),
     refreshCells: vi.fn(),
+    redrawRows: vi.fn(),
     stopEditing: vi.fn(),
     forEachNode: vi.fn(),
   };
