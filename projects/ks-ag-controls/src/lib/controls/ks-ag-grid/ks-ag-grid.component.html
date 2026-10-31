@@ -58,6 +58,7 @@
     [loading]="loading"
     (gridReady)="onGridReady()"
     (keydown.escape)="onEditEscape()"
+    (rowEditingStarted)="onRowEditingStarted($event)"
     (rowValueChanged)="onRowValueChanged($event)"
     (rowEditingStopped)="onRowEditingStopped($event)"
     (cellFocused)="onCellFocused($event)"

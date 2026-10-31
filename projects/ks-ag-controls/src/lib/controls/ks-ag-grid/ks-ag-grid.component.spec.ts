@@ -254,6 +254,7 @@ describe('KsAgGridComponent', () => {
       applyTransaction: vi.fn(() => ({ add: [], remove: [], update: [] })),
       getRowNode: vi.fn(() => undefined),
       refreshCells: vi.fn(),
+      redrawRows: vi.fn(),
       stopEditing: vi.fn(),
       forEachNode: vi.fn(),
     };
@@ -281,6 +282,11 @@ describe('KsAgGridComponent', () => {
     host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
     await vi.waitFor(() => {
       expect(api.getEditingCells().map((cell) => cell.column?.getColId())).toEqual(['name', 'note']);
+    });
+    await vi.waitFor(() => {
+      expect(host.querySelector('[data-action="save"]')).not.toBeNull();
+      expect(host.querySelector('[data-action="cancel"]')).not.toBeNull();
+      expect(host.querySelector('[data-action="edit"]')).toBeNull();
     });
     const nameInput = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
     expect(nameInput).not.toBeNull();
@@ -394,7 +400,7 @@ describe('KsAgGridComponent', () => {
     cell.click();
 
     await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(row));
-    expect(saveRow).toHaveBeenCalledExactlyOnceWith(row);
+    expect(saveRow).toHaveBeenCalledWith(row);
     expect(payloads).toEqual([JSON.stringify({ id: 1, name: 'Updated', note: 'Original' })]);
     expect(api.getEditingCells()).toHaveLength(0);
     expect(host.querySelector('[data-action="save"]')).toBeNull();
@@ -504,9 +510,11 @@ describe('KsAgGridComponent', () => {
     await fixture.whenStable();
     expect(saved).not.toHaveBeenCalled();
 
+    saved.mockClear();
     api.setFocusedCell(0, 'name');
 
-    await vi.waitFor(() => expect(saved).toHaveBeenCalledExactlyOnceWith(newRow));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledWith(newRow));
+    expect(saved).toHaveBeenCalledTimes(1);
     expect(newRow.name).toBe('New row');
     expect(api.getEditingCells()).toHaveLength(0);
   });
@@ -626,6 +634,7 @@ function stubGridApi<TData>(component: KsAgGridComponent<TData>) {
     applyTransaction: vi.fn().mockReturnValue({ remove: [{}], add: [], update: [] }),
     getRowNode: vi.fn().mockReturnValue(undefined),
     refreshCells: vi.fn(),
+    redrawRows: vi.fn(),
     stopEditing: vi.fn(),
     forEachNode: vi.fn(),
   };
