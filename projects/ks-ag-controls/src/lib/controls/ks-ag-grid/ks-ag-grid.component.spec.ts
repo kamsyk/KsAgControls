@@ -73,10 +73,11 @@ describe('KsAgGridComponent', () => {
     expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
   });
 
-  it('keeps the toolbar optional and updates the entire shell when the theme changes', () => {
+  it('keeps settings controls optional and updates the entire shell when the theme changes', () => {
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.grid-toolbar')).toBeNull();
+    expect(Array.from(host.querySelectorAll('.grid-toolbar button'), (button) => button.textContent?.trim()))
+      .toEqual(['Refresh', 'Add New Item']);
     expect(host.querySelector('.grid-shell--dark')).toBeNull();
 
     fixture.componentRef.setInput('enableSettingsPersistence', true);
@@ -95,6 +96,7 @@ describe('KsAgGridComponent', () => {
   it('renders labeled toolbar buttons with icons and preserves their handlers', () => {
     const save = vi.spyOn(component, 'saveSettings').mockImplementation(() => undefined);
     const clear = vi.spyOn(component, 'clearSettings').mockImplementation(() => undefined);
+    const refresh = vi.spyOn(component, 'refreshData').mockImplementation(() => undefined);
     const add = vi.spyOn(component, 'addNewItem').mockImplementation(() => undefined);
     fixture.componentRef.setInput('enableSettingsPersistence', true);
     fixture.detectChanges();
@@ -102,7 +104,7 @@ describe('KsAgGridComponent', () => {
     const host = fixture.nativeElement as HTMLElement;
     const buttons = host.querySelectorAll<HTMLButtonElement>('.grid-toolbar button');
     expect(Array.from(buttons, (button) => button.textContent?.trim())).toEqual([
-      'Save Settings', 'Clear Settings', 'Add New Item',
+      'Save Settings', 'Clear Settings', 'Refresh', 'Add New Item',
     ]);
     for (const button of buttons) {
       expect(button.type).toBe('button');
@@ -111,6 +113,7 @@ describe('KsAgGridComponent', () => {
     }
     expect(save).toHaveBeenCalledOnce();
     expect(clear).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledOnce();
     expect(add).toHaveBeenCalledOnce();
   });
 
@@ -725,6 +728,57 @@ describe('KsAgGridComponent', () => {
     component.cancelEdit(row);
 
     expect(row.name).toBe('Ada');
+  });
+
+  it('reloads rows added, replaced, or removed in the bound array', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const names = () => Array.from(
+      host.querySelectorAll<HTMLElement>('.ag-center-cols-container [col-id="name"]'),
+      (cell) => cell.textContent?.trim(),
+    );
+    await vi.waitFor(() => expect(names()).toEqual(['Ada']));
+
+    rows[0] = { id: 1, name: 'Ada Lovelace' };
+    rows.push({ id: 2, name: 'Grace' });
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+
+    await vi.waitFor(() => expect(names()).toEqual(['Ada Lovelace', 'Grace']));
+
+    rows.splice(0, 1);
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+    await vi.waitFor(() => expect(names()).toEqual(['Grace']));
+
+    rows.splice(0, 1);
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+    await vi.waitFor(() => expect(names()).toEqual([]));
+  });
+
+  it('discards an open edit when client data is refreshed', async () => {
+    const row: GridRow = { id: 1, name: 'Ada' };
+    fixture.componentRef.setInput('rowData', [row]);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const saved = vi.fn();
+    component.rowSaved.subscribe(saved);
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+
+    host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
+    await vi.waitFor(() => expect(host.querySelector('[col-id="name"] input')).not.toBeNull());
+    const input = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    component.refreshData();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(row.name).toBe('Ada');
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
   });
 
   it('keeps column definition identity stable across change detection', () => {
