@@ -788,6 +788,57 @@ describe('KsAgGridComponent', () => {
     expect(row.name).toBe('Ada');
   });
 
+  it('reloads rows added, replaced, or removed in the bound array', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const names = () => Array.from(
+      host.querySelectorAll<HTMLElement>('.ag-center-cols-container [col-id="name"]'),
+      (cell) => cell.textContent?.trim(),
+    );
+    await vi.waitFor(() => expect(names()).toEqual(['Ada']));
+
+    rows[0] = { id: 1, name: 'Ada Lovelace' };
+    rows.push({ id: 2, name: 'Grace' });
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+
+    await vi.waitFor(() => expect(names()).toEqual(['Ada Lovelace', 'Grace']));
+
+    rows.splice(0, 1);
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+    await vi.waitFor(() => expect(names()).toEqual(['Grace']));
+
+    rows.splice(0, 1);
+    host.querySelector<HTMLButtonElement>('.grid-toolbar-button')!.click();
+    await vi.waitFor(() => expect(names()).toEqual([]));
+  });
+
+  it('discards an open edit when client data is refreshed', async () => {
+    const row: GridRow = { id: 1, name: 'Ada' };
+    fixture.componentRef.setInput('rowData', [row]);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const saved = vi.fn();
+    component.rowSaved.subscribe(saved);
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+
+    host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
+    await vi.waitFor(() => expect(host.querySelector('[col-id="name"] input')).not.toBeNull());
+    const input = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    component.refreshData();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(row.name).toBe('Ada');
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+  });
+
   it('keeps column definition identity stable across change detection', () => {
     component.columnDefs = [{ field: 'name' }];
     component.enableActionButtons = true;

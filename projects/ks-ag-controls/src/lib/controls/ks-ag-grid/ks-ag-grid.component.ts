@@ -940,9 +940,13 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         // Objects set through the API always notify, so the same datasource reloads.
         this.agGrid.api.setGridOption('datasource', this.datasource);
       } else if (!this.useServerSideData && this.rowData) {
-        // For client-side data, refresh the grid
-        this.agGrid.api.refreshCells({ force: true });
-        this.agGrid.api.redrawRows();
+        // redrawRows only repaints the current row model. Rows pushed, replaced,
+        // or spliced in the bound array stay invisible until rowData is reapplied.
+        // Drop open editors first so a refresh cannot commit them into stale rows.
+        for (const data of [...this.editingRows]) {
+          this.cancelEdit(data);
+        }
+        this.agGrid.api.setGridOption('rowData', this.rowData);
       }
     }
   }
