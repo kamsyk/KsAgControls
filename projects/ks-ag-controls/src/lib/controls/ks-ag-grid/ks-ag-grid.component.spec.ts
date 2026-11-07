@@ -73,24 +73,27 @@ describe('KsAgGridComponent', () => {
     expect(component.gridClass).toBe('ag-theme-quartz-dark custom-grid');
   });
 
-  it('keeps settings controls optional and updates the entire shell when the theme changes', () => {
+  it('shows settings buttons only with persistence and updates the shell and host when the theme changes', () => {
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    expect(Array.from(host.querySelectorAll('.grid-toolbar button'), (button) => button.textContent?.trim()))
-      .toEqual(['Refresh', 'Add New Item']);
+    const groupLabels = () =>
+      Array.from(host.querySelectorAll('[role="group"]'), (group) => group.getAttribute('aria-label'));
+    expect(groupLabels()).toEqual(['Grid actions']);
     expect(host.querySelector('.grid-shell--dark')).toBeNull();
+    expect(host.classList).not.toContain('ks-ag-grid--dark');
 
     fixture.componentRef.setInput('enableSettingsPersistence', true);
     fixture.componentRef.setInput('themeMode', 'dark');
     fixture.detectChanges();
 
-    expect(host.querySelector('.grid-toolbar')).not.toBeNull();
+    expect(groupLabels()).toEqual(['Grid settings', 'Grid actions']);
     expect(host.querySelector('.grid-shell--dark')).not.toBeNull();
-    expect(host.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('Grid settings');
+    expect(host.classList).toContain('ks-ag-grid--dark');
 
     fixture.componentRef.setInput('themeMode', 'light');
     fixture.detectChanges();
     expect(host.querySelector('.grid-shell--dark')).toBeNull();
+    expect(host.classList).not.toContain('ks-ag-grid--dark');
   });
 
   it('renders labeled toolbar buttons with icons and preserves their handlers', () => {
@@ -115,6 +118,61 @@ describe('KsAgGridComponent', () => {
     expect(clear).toHaveBeenCalledOnce();
     expect(refresh).toHaveBeenCalledOnce();
     expect(add).toHaveBeenCalledOnce();
+  });
+
+  it('hides the built-in toolbar buttons when showToolbarActions is false', () => {
+    fixture.componentRef.setInput('enableSettingsPersistence', true);
+    fixture.componentRef.setInput('showToolbarActions', false);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelectorAll('.grid-toolbar button')).toHaveLength(0);
+    expect(host.querySelector('[aria-label="Grid settings"]')).toBeNull();
+    expect(host.querySelector('.grid-toolbar-divider')).toBeNull();
+  });
+
+  it('places the actions column last and pins it right when actionsPosition is end', () => {
+    component.columnDefs = [{ field: 'name' }];
+    component.enableActionButtons = true;
+    expect(component.effectiveColumnDefs[0].colId).toBe('ks-ag-grid-actions');
+    expect(component.effectiveColumnDefs[0].pinned).toBe('left');
+
+    component.actionsPosition = 'end';
+    const columns = component.effectiveColumnDefs;
+    expect(columns.map((column) => column.colId ?? column.field)).toEqual(['name', 'ks-ag-grid-actions']);
+    expect(columns[1].pinned).toBe('right');
+  });
+
+  it('applies consumer shell classes, inline styles, and CSS variables', () => {
+    fixture.componentRef.setInput('shellClass', 'sports-grid');
+    fixture.componentRef.setInput('shellStyle', { '--ks-grid-accent': 'rgb(22, 163, 74)', 'max-width': '800px' });
+    fixture.detectChanges();
+
+    const shell = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.grid-shell')!;
+    expect(shell.classList).toContain('sports-grid');
+    expect(shell.style.getPropertyValue('--ks-grid-accent')).toBe('rgb(22, 163, 74)');
+    expect(shell.style.maxWidth).toBe('800px');
+  });
+
+  it('removes the shell frame when bordered is false', () => {
+    fixture.componentRef.setInput('bordered', false);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).classList).toContain('ks-ag-grid--borderless');
+  });
+
+  it('renders the optional title and merges theme params over the defaults', () => {
+    fixture.componentRef.setInput('gridTitle', 'Sports');
+    fixture.componentRef.setInput('themeParams', { rowHeight: 36 });
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('h2.grid-toolbar-title')?.textContent?.trim()).toBe('Sports');
+    const theme = component.theme;
+    expect(component.theme).toBe(theme);
+    expect(component.agGrid.theme).toBe(theme);
+
+    fixture.componentRef.setInput('themeMode', 'dark');
+    expect(component.theme).not.toBe(theme);
   });
 
   function actionColumn(deleteOnly = false) {
