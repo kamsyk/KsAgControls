@@ -13,6 +13,9 @@
 
   box-sizing: border-box;
   width: 100%;
+  max-width: 468px;
+  margin-inline: auto;
+  padding: 24px;
   color: var(--ks-login-on-surface);
   background: var(--ks-login-surface);
 }
@@ -23,10 +26,21 @@
   --ks-login-outline: var(--mat-sys-outline-variant, #49454f);
   --ks-login-error: var(--mat-sys-error, #f2b8b5);
   --ks-login-surface: var(--mat-sys-surface, #1c1b1f);
+  --mat-form-field-outlined-label-text-color: var(--ks-login-on-surface-variant);
+  --mat-form-field-outlined-hover-label-text-color: var(--ks-login-on-surface);
+  --mat-form-field-outlined-disabled-label-text-color: #938f99;
+  --mat-form-field-outlined-input-text-color: var(--ks-login-on-surface);
+  --mat-form-field-outlined-disabled-input-text-color: #938f99;
+  --mat-form-field-outlined-input-text-placeholder-color: var(--ks-login-on-surface-variant);
+  --mat-form-field-outlined-outline-color: var(--ks-login-outline);
+  --mat-form-field-outlined-hover-outline-color: var(--ks-login-on-surface);
+  --mat-button-outlined-label-text-color: var(--ks-login-on-surface);
+  --mat-button-outlined-disabled-label-text-color: #938f99;
+  --mat-button-filled-disabled-label-text-color: #cac4d0;
 }
 
 .login-title {
-  margin: 0 0 16px;
+  margin: 0 0 24px;
   color: var(--ks-login-on-surface);
   font: var(--mat-sys-headline-small, 400 24px / 32px Roboto, sans-serif);
 }
@@ -37,32 +51,60 @@
   gap: 8px;
 }
 
-.w-100,
 mat-form-field {
   width: 100%;
 }
 
 .login-error {
-  margin: 0.5rem 0;
+  margin: 0 0 8px;
   color: var(--ks-login-error);
   font: var(--mat-sys-body-medium, 400 14px / 20px Roboto, sans-serif);
 }
 
-.login-actions {
+.login-actions,
+.login-providers {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
-  margin-top: 8px;
-  padding: 0;
+}
+
+.login-actions lib-ks-button {
+  display: block;
+  width: 100%;
+}
+
+.login-actions ::ng-deep button,
+.login-providers button {
+  width: 100%;
+  min-height: 48px;
+  height: auto;
+  padding-block: 12px;
+  white-space: normal;
+}
+
+.login-providers {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--ks-login-outline);
+}
+
+.login-providers button {
+  position: relative;
+  padding-inline: 48px;
+}
+
+.provider-icon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  transform: translateY(-50%);
 }
 
 @media (max-width: 640px) {
-  .login-actions {
-    flex-direction: column;
-  }
-
-  .login-actions ::ng-deep lib-ks-button,
-  .login-actions ::ng-deep button {
-    width: 100%;
+  .ks-login {
+    padding: 16px;
   }
 }

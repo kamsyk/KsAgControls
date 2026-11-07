@@ -1,33 +1,70 @@
-<div>
-  @if (enableSettingsPersistence) {
-    <div class="grid-toolbar">
-      <button (click)="saveSettings()">
-        <lib-ks-icon name="save" />
-        Save Settings img
-      </button>
-      <button (click)="clearSettings()">Clear Settings</button>
-      <button (click)="addNewItem()">Add New Item</button>
+<div [class]="shellClasses" [style]="shellStyle">
+  <div class="grid-toolbar">
+    <div class="grid-toolbar-start">
+      @if (gridTitle) {
+        <h2 class="grid-toolbar-title">{{ gridTitle }}</h2>
+      }
+      <ng-content select="[ksGridToolbarStart]" />
     </div>
-  }
+
+    <div class="grid-toolbar-end">
+      @if (enableSettingsPersistence && showToolbarActions) {
+        <div class="grid-toolbar-group" role="group" aria-label="Grid settings">
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="saveSettings()">
+            <lib-ks-icon name="save" />
+            Save Settings
+          </button>
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="clearSettings()">
+            <lib-ks-icon name="settings_backup_restore" />
+            Clear Settings
+          </button>
+        </div>
+        <span class="grid-toolbar-divider" aria-hidden="true"></span>
+      }
+      <div class="grid-toolbar-group" role="group" aria-label="Grid actions">
+        <ng-content select="[ksGridToolbarEnd]" />
+        @if (showToolbarActions) {
+          <button type="button" class="grid-toolbar-button" (click)="refreshData()">
+            <lib-ks-icon name="refresh" />
+            Refresh
+          </button>
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
+            <lib-ks-icon name="add" />
+            Add New Item
+          </button>
+        }
+      </div>
+    </div>
+  </div>
 
   <ag-grid-angular
-          [class]="gridClass"
-          [theme]="theme"
-          [style]="style"
-          [modules]="modules"
-          [rowModelType]="rowModelType"
-          [rowData]="useServerSideData ? undefined : rowData"
-          [datasource]="datasource"
-          [columnDefs]="effectiveColumnDefs"
-          [defaultColDef]="defaultColDef"
-          domLayout="autoHeight"
-          [pagination]="true"
-          [paginationPageSize]="pageSize"
-          [paginationPageSizeSelector]="pageSizeOptions"
-          [cacheBlockSize]="pageSize"
-          [animateRows]="true"
-          [loading]="loading"
-          (gridReady)="onGridReady()"
-          (cellValueChanged)="onCellValueChanged($event)">
-        </ag-grid-angular>
+    [class]="gridClass"
+    [theme]="theme"
+    [style]="style"
+    [modules]="modules"
+    [rowModelType]="rowModelType"
+    [rowData]="useServerSideData ? undefined : rowData"
+    [datasource]="datasource"
+    [columnDefs]="effectiveColumnDefs"
+    [defaultColDef]="defaultColDef"
+    [editType]="enableActionButtons ? 'fullRow' : undefined"
+    [suppressClickEdit]="enableActionButtons"
+    [stopEditingWhenCellsLoseFocus]="false"
+    (focusout)="onGridFocusOut($event)"
+    domLayout="autoHeight"
+    [pagination]="true"
+    [paginationPageSize]="pageSize"
+    [paginationPageSizeSelector]="pageSizeOptions"
+    [cacheBlockSize]="pageSize"
+    [animateRows]="true"
+    [loading]="loading"
+    (gridReady)="onGridReady()"
+    (keydown.escape)="onEditEscape()"
+    (rowEditingStarted)="onRowEditingStarted($event)"
+    (rowValueChanged)="onRowValueChanged($event)"
+    (rowEditingStopped)="onRowEditingStopped($event)"
+    (cellFocused)="onCellFocused($event)"
+    (rowClicked)="onRowClicked($event)"
+    (cellValueChanged)="onCellValueChanged($event)">
+  </ag-grid-angular>
 </div>

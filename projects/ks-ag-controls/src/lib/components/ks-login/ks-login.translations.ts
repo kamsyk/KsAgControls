@@ -12,9 +12,16 @@ export interface KsLoginTranslations {
   googleAuthError: string;
   signInWithFacebook: string;
   facebookAuthError: string;
+  signInWithMicrosoft: string;
+  microsoftAuthError: string;
 }
 
-export type KsLoginError = 'invalidCredentials' | 'loginError' | 'googleAuthError' | 'facebookAuthError';
+export type KsLoginError =
+  | 'invalidCredentials'
+  | 'loginError'
+  | 'googleAuthError'
+  | 'facebookAuthError'
+  | 'microsoftAuthError';
 
 export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations> = {
   cs: {
@@ -29,6 +36,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signInWithFacebook: 'Přihlásit se přes Facebook',
     facebookAuthError: 'Přihlášení přes Facebook se nepodařilo spustit. Zkontrolujte konfiguraci.',
     googleAuthError: 'Přihlášení přes Google se nepodařilo spustit. Zkontrolujte konfiguraci.',
+    signInWithMicrosoft: 'Přihlásit se přes Microsoft',
+    microsoftAuthError: 'Přihlášení přes Microsoft se nepodařilo spustit. Zkontrolujte konfiguraci.',
   },
   en: {
     signIn: 'Sign in',
@@ -42,6 +51,8 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signInWithFacebook: 'Sign in with Facebook',
     facebookAuthError: 'Could not start Facebook authentication. Check the configuration.',
     googleAuthError: 'Could not start Google authentication. Check the configuration.',
+    signInWithMicrosoft: 'Sign in with Microsoft',
+    microsoftAuthError: 'Could not start Microsoft authentication. Check the configuration.',
   },
   de: {
     signIn: 'Anmelden',
@@ -55,5 +66,7 @@ export const KS_LOGIN_TRANSLATIONS: Record<KsLoginLanguage, KsLoginTranslations>
     signInWithFacebook: 'Mit Facebook anmelden',
     facebookAuthError: 'Die Facebook-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
     googleAuthError: 'Die Google-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
+    signInWithMicrosoft: 'Mit Microsoft anmelden',
+    microsoftAuthError: 'Die Microsoft-Anmeldung konnte nicht gestartet werden. Prüfen Sie die Konfiguration.',
   },
 };

@@ -10,7 +10,7 @@ export class GoogleAuthService {
     this.startProvider(authUrl, returnUrl, 'Google');
   }
 
-  startProvider(authUrl: string, returnUrl: string, provider: 'Google' | 'Facebook'): void {
+  startProvider(authUrl: string, returnUrl: string, provider: 'Google' | 'Facebook' | 'Microsoft'): void {
     if (!isPlatformBrowser(this.platformId) || !this.document.defaultView) {
       throw new Error(`${provider} authentication requires a browser.`);
     }

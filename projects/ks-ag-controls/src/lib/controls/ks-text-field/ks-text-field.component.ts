@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { BaseControl } from '../base-control';
@@ -7,6 +7,7 @@ import { BaseControl } from '../base-control';
   selector: 'lib-ks-text-field',
   imports: [MatInputModule, FormsModule],
   templateUrl: './ks-text-field.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ks-text-field.component.css',
   standalone: true,
 })

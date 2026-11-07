@@ -1,130 +1,350 @@
-/* AG Grid Theme Customization */
+/*
+ * Design tokens live on the host so consumers can override them from their own styles:
+ *   lib-ks-ag-grid.my-grid { --ks-grid-accent: #16a34a; }
+ * or per instance through the shellStyle input. AG Grid's theme reads the same tokens.
+ */
 :host {
+  --ks-grid-surface: #ffffff;
+  --ks-grid-header: #f8fafc;
+  --ks-grid-toolbar: #ffffff;
+  --ks-grid-odd-row: #ffffff;
+  --ks-grid-text: #0f172a;
+  --ks-grid-muted: #526176;
+  --ks-grid-border: #e2e8f0;
+  --ks-grid-row-border: #eef2f6;
+  --ks-grid-hover: #f1f5f9;
+  --ks-grid-selected: #eff6ff;
+  --ks-grid-accent: #2563eb;
+  --ks-grid-on-accent: #ffffff;
+  --ks-grid-accent-hover: #1d4ed8;
+  --ks-grid-danger: #be123c;
+  --ks-grid-danger-hover: #fff1f2;
+  --ks-grid-success: #15803d;
+  --ks-grid-success-hover: #f0fdf4;
+  --ks-grid-radius: 12px;
+  --ks-grid-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 4px 12px rgb(15 23 42 / 4%);
+  --ks-grid-toolbar-padding: 12px 16px;
+  --ks-grid-button-radius: 8px;
+
   display: block;
   width: 100%;
+  min-width: 0;
+  color-scheme: light;
 }
 
-/* Light Theme Customization */
-:host ::ng-deep .ag-theme-quartz {
-  --ag-background-color: #ffffff;
-  --ag-foreground-color: #181d1f;
-  --ag-border-color: #e0e0e0;
-  --ag-header-background-color: #f5f5f5;
-  --ag-odd-row-background-color: #fcfcfc;
-  --ag-row-hover-color: #f0f0f0;
+:host(.ks-ag-grid--dark) {
+  --ks-grid-surface: #172033;
+  --ks-grid-header: #1c273b;
+  --ks-grid-toolbar: #172033;
+  --ks-grid-odd-row: #172033;
+  --ks-grid-text: #e2e8f0;
+  --ks-grid-muted: #a8b7cc;
+  --ks-grid-border: #334155;
+  --ks-grid-row-border: #243046;
+  --ks-grid-hover: #243249;
+  --ks-grid-selected: #253b60;
+  --ks-grid-accent: #93c5fd;
+  --ks-grid-on-accent: #172033;
+  --ks-grid-accent-hover: #bfdbfe;
+  --ks-grid-danger: #fda4af;
+  --ks-grid-danger-hover: #432638;
+  --ks-grid-success: #86efac;
+  --ks-grid-success-hover: #1c3b32;
+  --ks-grid-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+
+  color-scheme: dark;
 }
 
-/* Dark Theme Customization */
-:host ::ng-deep .ag-theme-quartz-dark {
-  --ag-background-color: #1e1e1e;
-  --ag-foreground-color: #ffffff;
-  --ag-border-color: #3a3a3a;
-  --ag-header-background-color: #2a2a2a;
-  --ag-odd-row-background-color: #252525;
-  --ag-row-hover-color: #333333;
-  --ag-selected-row-background-color: #3a4a5a;
+.grid-shell {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ks-grid-text);
+  background: var(--ks-grid-surface);
+  border: 1px solid var(--ks-grid-border);
+  border-radius: var(--ks-grid-radius);
+  box-shadow: var(--ks-grid-shadow);
 }
 
-/* Smooth transitions when switching themes */
-:host ::ng-deep .ag-root-wrapper {
-  transition: background-color 0.3s ease, color 0.3s ease;
+:host(.ks-ag-grid--borderless) .grid-shell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-/* Grid Toolbar Styles */
+/* Toolbar */
+.grid-toolbar,
+.grid-toolbar-start,
+.grid-toolbar-end,
+.grid-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
 .grid-toolbar {
-  display: flex;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: var(--ks-grid-toolbar-padding);
+  background: var(--ks-grid-toolbar);
+  border-bottom: 1px solid var(--ks-grid-border);
+}
+
+.grid-toolbar-start {
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+.grid-toolbar-start:empty {
+  display: none;
+}
+
+.grid-toolbar-end {
+  flex: 0 1 auto;
+  justify-content: flex-end;
   gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  margin-inline-start: auto;
 }
 
-.grid-toolbar button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
-}
-
-.grid-toolbar button:hover {
-  opacity: 0.9;
-}
-
-/* Delete Button in Grid */
-:host ::ng-deep .delete-btn {
-  cursor: pointer;
-  padding: 4px 8px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  transition: background-color 0.2s ease;
-}
-
-:host ::ng-deep .delete-btn:hover {
-  background: #c82333;
-}
-
-/* Action Buttons Container */
-:host ::ng-deep .action-buttons {
-  display: flex;
+.grid-toolbar-group {
   gap: 6px;
+}
+
+.grid-toolbar-title {
+  margin: 0;
+  color: var(--ks-grid-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.grid-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--ks-grid-border);
+}
+
+.grid-toolbar-button {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--ks-grid-border);
+  border-radius: var(--ks-grid-button-radius);
+  background: var(--ks-grid-surface);
+  color: var(--ks-grid-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 1px rgb(15 23 42 / 4%);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.grid-toolbar-button lib-ks-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.grid-toolbar-button:hover {
+  background: var(--ks-grid-hover);
+}
+
+.grid-toolbar-button:active {
+  box-shadow: none;
+}
+
+.grid-toolbar-button--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ks-grid-muted);
+  box-shadow: none;
+}
+
+.grid-toolbar-button--quiet:hover {
+  color: var(--ks-grid-text);
+}
+
+.grid-toolbar-button--primary {
+  border-color: var(--ks-grid-accent);
+  background: var(--ks-grid-accent);
+  color: var(--ks-grid-on-accent);
+}
+
+.grid-toolbar-button--primary:hover {
+  border-color: var(--ks-grid-accent-hover);
+  background: var(--ks-grid-accent-hover);
+}
+
+.grid-toolbar-button:focus-visible,
+:host ::ng-deep .ks-grid-action:focus-visible {
+  outline: 2px solid var(--ks-grid-accent);
+  outline-offset: 2px;
+}
+
+/* Header */
+:host ::ng-deep .ag-header-cell-text {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Keep filter buttons quiet until the header is used or a filter is active. */
+:host ::ng-deep .ag-header-cell-filter-button {
+  opacity: 0.4;
+  transition: opacity 150ms ease;
+}
+
+:host ::ng-deep .ag-header-cell:hover .ag-header-cell-filter-button,
+:host ::ng-deep .ag-header-cell:focus-within .ag-header-cell-filter-button,
+:host ::ng-deep .ag-header-cell-filter-button:has(.ag-filter-active),
+:host ::ng-deep .ag-header-cell-filtered .ag-header-cell-filter-button {
+  opacity: 1;
+}
+
+/* Cell renderers are created by AG Grid outside Angular's style encapsulation. */
+:host ::ng-deep .ks-grid-action-cell {
+  padding-inline: 12px;
+}
+
+:host ::ng-deep .ks-grid-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   height: 100%;
 }
 
-:host ::ng-deep .action-buttons button {
+:host ::ng-deep .ks-grid-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ks-grid-muted);
   cursor: pointer;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Edit Button */
-:host ::ng-deep .edit-btn {
-  background: #007bff;
-  color: white;
+:host ::ng-deep .ks-grid-action svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
-:host ::ng-deep .edit-btn:hover {
-  background: #0056b3;
+:host ::ng-deep .ks-grid-action:hover {
+  background: var(--ks-grid-hover);
+  color: var(--ks-grid-text);
 }
 
-/* Save Button */
-:host ::ng-deep .save-btn {
-  background: #28a745;
-  color: white;
+:host ::ng-deep .ks-grid-action--edit {
+  color: var(--ks-grid-accent);
 }
 
-:host ::ng-deep .save-btn:hover {
-  background: #218838;
+:host ::ng-deep .ks-grid-action--edit:hover {
+  background: var(--ks-grid-selected);
+  color: var(--ks-grid-accent);
 }
 
-/* Cancel Button */
-:host ::ng-deep .cancel-btn {
-  background: #6c757d;
-  color: white;
+:host ::ng-deep .ks-grid-action--delete {
+  color: var(--ks-grid-danger);
 }
 
-:host ::ng-deep .cancel-btn:hover {
-  background: #5a6268;
+:host ::ng-deep .ks-grid-action--delete:hover {
+  background: var(--ks-grid-danger-hover);
+  color: var(--ks-grid-danger);
 }
 
-/* Delete Button in Action Buttons */
-:host ::ng-deep .action-buttons .delete-btn {
-  background: #dc3545;
-  color: white;
+:host ::ng-deep .ks-grid-action--save {
+  color: var(--ks-grid-success);
 }
 
-:host ::ng-deep .action-buttons .delete-btn:hover {
-  background: #c82333;
+:host ::ng-deep .ks-grid-action--save:hover {
+  background: var(--ks-grid-success-hover);
+  color: var(--ks-grid-success);
+}
+
+/* Pager */
+:host ::ng-deep .ag-paging-panel {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px 24px;
+  min-height: 56px;
+  height: auto;
+  padding: 10px 16px;
+  background: var(--ks-grid-header);
+  border-top: 1px solid var(--ks-grid-border);
+  color: var(--ks-grid-muted);
+  font-size: 13px;
+}
+
+:host ::ng-deep .ag-paging-panel > * {
+  margin: 0;
+}
+
+:host ::ng-deep .ag-paging-row-summary-panel-number,
+:host ::ng-deep .ag-paging-number {
+  color: var(--ks-grid-text);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .grid-toolbar {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .grid-toolbar-start,
+  .grid-toolbar-end {
+    flex: 1 1 100%;
+  }
+
+  .grid-toolbar-end {
+    justify-content: space-between;
+  }
+
+  .grid-toolbar-divider {
+    display: none;
+  }
+
+  :host ::ng-deep .ag-paging-panel {
+    justify-content: center;
+    gap: 12px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-toolbar-group {
+    flex: 1 1 100%;
+  }
+
+  .grid-toolbar-button--primary {
+    flex: 1 1 auto;
+  }
+}
+
+@media (pointer: coarse) {
+  .grid-toolbar-button {
+    min-height: 44px;
+  }
+
+  :host ::ng-deep .ks-grid-action {
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid-toolbar-button,
+  :host ::ng-deep .ks-grid-action {
+    transition: none;
+  }
 }

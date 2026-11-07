@@ -7,23 +7,23 @@ import { AuthService, LoginResponse } from '../../services/auth.service';
 import { KsLoginLanguage } from './ks-login.translations';
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { GoogleAuthService } from '../../services/google-auth.service';
+import { KsAuthProvider } from '../ks-auth-provider';
 
 describe('KsLoginComponent', () => {
   let component: KsLoginComponent;
   let fixture: ComponentFixture<KsLoginComponent>;
   const login = vi.fn();
-  const startGoogle = vi.fn();
-  const startFacebook = vi.fn();
+  const googleAuth = { start: vi.fn(), startProvider: vi.fn() };
 
   beforeEach(async () => {
     login.mockReset();
-    startGoogle.mockReset();
-    startFacebook.mockReset();
+    googleAuth.start.mockReset();
+    googleAuth.startProvider.mockReset();
     await TestBed.configureTestingModule({
       imports: [KsLoginComponent],
       providers: [
         { provide: AuthService, useValue: { login } },
-        { provide: GoogleAuthService, useValue: { start: startGoogle, startProvider: startFacebook } },
+        { provide: GoogleAuthService, useValue: googleAuth },
       ],
     }).compileComponents();
 
@@ -71,70 +71,73 @@ describe('KsLoginComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('button')).toHaveLength(2);
   });
 
-  it('starts Google authentication without submitting an invalid login form', () => {
-    fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
-    fixture.componentRef.setInput('googleReturnUrl', '/dashboard');
-    fixture.detectChanges();
-    const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
-    expect(buttons[2].textContent).toBe('Sign in with Google');
-    expect(buttons[2].disabled).toBe(false);
-    buttons[2].click();
-    expect(startGoogle).toHaveBeenCalledWith('/api/auth/google', '/dashboard');
-    expect(login).not.toHaveBeenCalled();
-    component.loading = true;
-    fixture.detectChanges();
-    expect(buttons[2].disabled).toBe(true);
-    component.signInWithGoogle();
-    expect(startGoogle).toHaveBeenCalledTimes(1);
-  });
-
-  it('displays Google failures and clears them on retry', () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    try {
-      startGoogle.mockImplementationOnce(() => { throw new Error('Invalid URL'); });
-      component.signInWithGoogle();
+  for (const provider of ['google', 'facebook', 'microsoft'] as const) {
+    it(`preserves ${provider} sign-in and reports configuration failures`, () => {
+      const url = `/api/auth/${provider}`;
+      const name = { google: 'Google', facebook: 'Facebook', microsoft: 'Microsoft' }[provider];
+      fixture.componentRef.setInput(`${provider}AuthUrl`, url);
+      fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
       fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain(component.translations().googleAuthError);
-      fixture.componentRef.setInput('language', 'de');
-      expect(component.error).toBe(component.translations().googleAuthError);
-      component.signInWithGoogle();
-      expect(component.error).toBe('');
-      expect(log).toHaveBeenCalled();
-    } finally {
-      log.mockRestore();
-    }
-  });
+      const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('button');
+      const button = Array.from(buttons).find(element => element.textContent?.includes(name));
+      expect(button).toBeDefined();
+      expect(button!.querySelector('svg.provider-icon')).not.toBeNull();
+      button!.click();
+      if (provider === 'google') {
+        expect(googleAuth.start).toHaveBeenCalledWith(url, '/advisor');
+      } else {
+        expect(googleAuth.startProvider).toHaveBeenCalledWith(url, '/advisor', name);
+      }
+      const start = provider === 'google' ? googleAuth.start : googleAuth.startProvider;
+      start.mockImplementationOnce(() => { throw new Error('Invalid provider configuration'); });
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        button!.click();
+        fixture.detectChanges();
+        expect(component.error).toBe(component.translations()[`${provider}AuthError`]);
+        expect(log).toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    });
+  }
 
-  it('starts Facebook authentication without submitting login and respects loading', () => {
+  const providerSelections: KsAuthProvider[][] = [
+    [],
+    ['google'],
+    ['facebook'],
+    ['microsoft'],
+    ['google', 'facebook'],
+    ['google', 'microsoft'],
+    ['facebook', 'microsoft'],
+    ['google', 'facebook', 'microsoft'],
+  ];
+
+  for (const providers of providerSelections) {
+    it(`shows only selected login providers: ${providers.join(', ') || 'none'}`, () => {
+      fixture.componentRef.setInput('googleAuthUrl', '/api/auth/google');
+      fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
+      fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.login-providers button')).toHaveLength(3);
+
+      fixture.componentRef.setInput('providers', providers);
+      fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> =
+        fixture.nativeElement.querySelectorAll('.login-providers button');
+      expect(Array.from(buttons, button => button.textContent?.trim().toLowerCase()))
+        .toEqual(providers.map(provider => `sign in with ${provider}`));
+      expect(fixture.nativeElement.querySelector('.login-providers') !== null)
+        .toBe(providers.length > 0);
+      expect(fixture.nativeElement.querySelectorAll('.login-actions button')).toHaveLength(2);
+    });
+  }
+
+  it('still requires an auth URL for selected login providers', () => {
+    fixture.componentRef.setInput('providers', ['google']);
     fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
-    fixture.componentRef.setInput('facebookReturnUrl', '/dashboard');
     fixture.detectChanges();
-    const element: HTMLElement = fixture.nativeElement;
-    const button = Array.from(element.querySelectorAll<HTMLButtonElement>('button'))
-      .find(button => button.textContent === 'Sign in with Facebook')!;
-    button.click();
-    expect(startFacebook).toHaveBeenCalledWith('/api/auth/facebook', '/dashboard', 'Facebook');
-    expect(login).not.toHaveBeenCalled();
-    component.loading = true;
-    fixture.detectChanges();
-    expect(button.disabled).toBe(true);
-    component.signInWithFacebook();
-    expect(startFacebook).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows localized Facebook errors and clears them on retry', () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    try {
-      startFacebook.mockImplementationOnce(() => { throw new Error('Invalid URL'); });
-      component.signInWithFacebook();
-      fixture.componentRef.setInput('language', 'de');
-      fixture.detectChanges();
-      expect(component.error).toBe(component.translations().facebookAuthError);
-      component.signInWithFacebook();
-      expect(component.error).toBe('');
-    } finally {
-      log.mockRestore();
-    }
+    expect(fixture.nativeElement.querySelector('.login-providers')).toBeNull();
   });
 
   const languages: {
@@ -186,6 +189,10 @@ describe('KsLoginComponent', () => {
       fixture.componentRef.setInput('googleReturnUrl', '/dashboard');
       fixture.componentRef.setInput('facebookAuthUrl', '/api/auth/facebook');
       fixture.componentRef.setInput('facebookReturnUrl', '/dashboard');
+      fixture.componentRef.setInput('microsoftAuthUrl', '/api/auth/microsoft/register');
+      fixture.componentRef.setInput('microsoftReturnUrl', '/dashboard');
+      fixture.componentRef.setInput('themeMode', 'dark');
+      fixture.componentRef.setInput('providers', ['facebook']);
       fixture.detectChanges();
       const button: HTMLButtonElement =
         fixture.nativeElement.querySelector('button[type="button"]');
@@ -199,14 +206,21 @@ describe('KsLoginComponent', () => {
       expect(dialogs).toHaveLength(1);
       expect(dialogs[0].componentInstance).toBeInstanceOf(KsSignUpComponent);
       expect(dialogs[0].componentInstance.language()).toBe(text.language);
+      expect(dialogs[0].componentInstance.themeMode()).toBe('dark');
+      expect(dialogs[0].componentInstance.providers()).toEqual(['facebook']);
       expect(dialogs[0].componentInstance.googleAuthUrl()).toBe('/api/auth/google');
       expect(dialogs[0].componentInstance.googleReturnUrl()).toBe('/dashboard');
       expect(dialogs[0].componentInstance.facebookAuthUrl()).toBe('/api/auth/facebook');
       expect(dialogs[0].componentInstance.facebookReturnUrl()).toBe('/dashboard');
+      expect(dialogs[0].componentInstance.microsoftAuthUrl()).toBe('/api/auth/microsoft/register');
+      expect(dialogs[0].componentInstance.microsoftReturnUrl()).toBe('/dashboard');
       expect(document.querySelector('mat-dialog-container')?.getAttribute('aria-label'))
         .toBe(text.signUp);
       expect(document.querySelector('lib-ks-sign-up button[type="submit"]')?.textContent?.trim())
         .toBe(dialogs[0].componentInstance.translations().signUp);
+      const providerButtons = document.querySelectorAll('lib-ks-sign-up .sign-up-providers button');
+      expect(providerButtons).toHaveLength(1);
+      expect(providerButtons[0].textContent).toContain('Facebook');
       expect(login).not.toHaveBeenCalled();
 
       const closed = firstValueFrom(dialogs[0].afterClosed());
