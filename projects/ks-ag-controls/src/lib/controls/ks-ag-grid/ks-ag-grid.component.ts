@@ -41,6 +41,10 @@ import {
   DateEditorModule,
   CheckboxEditorModule,
   CustomEditorModule,
+  PaginationModule,
+  TextFilterModule,
+  NumberFilterModule,
+  DateFilterModule,
 } from 'ag-grid-community';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { KsIconComponent } from '../ks-icon/ks-icon.component';
@@ -74,6 +78,12 @@ export type KsAgGridServerRowsFetcher<TData = unknown> = (
   | Promise<KsAgGridServerResult<TData>>
   | import('rxjs').Observable<KsAgGridServerResult<TData>>;
 
+/** AG Grid theme parameters layered over the library defaults. */
+export type KsAgGridThemeParams = Parameters<Theme['withParams']>[0];
+
+/** Inline style for the grid shell; CSS custom properties such as `--ks-grid-accent` are supported. */
+export type KsAgGridShellStyle = string | Record<string, string | number | null | undefined>;
+
 export interface KsAgGridState {
   columnState: ColumnState[];
   filterModel: Record<string, unknown>;
@@ -87,6 +97,10 @@ export interface KsAgGridState {
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ks-ag-grid.component.css',
   standalone: true,
+  host: {
+    '[class.ks-ag-grid--dark]': "themeMode === 'dark'",
+    '[class.ks-ag-grid--borderless]': '!bordered',
+  },
 })
 export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
@@ -99,6 +113,24 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   @Input() pageSize = 25;
   @Input() pageSizeOptions: number[] = [10, 25, 50, 100];
   @Input() themeMode: 'light' | 'dark' = 'light';
+
+  // Styling hooks
+  /** Optional heading shown at the start of the toolbar. */
+  @Input() gridTitle: string | null = null;
+  /** Extra classes for the outer shell (toolbar + grid). */
+  @Input() shellClass: string | null = null;
+  /** Inline styles for the outer shell, e.g. `{ '--ks-grid-accent': '#16a34a' }`. */
+  @Input() shellStyle: KsAgGridShellStyle | null = null;
+  /** AG Grid theme parameters merged over the defaults, e.g. `{ rowHeight: 40 }`. */
+  @Input() themeParams: KsAgGridThemeParams | null = null;
+  /** Draws the shell's border, radius, and shadow. Disable when the grid sits inside a card. */
+  @Input() bordered = true;
+  /**
+   * Shows the built-in Save/Clear Settings, Refresh, and Add New Item toolbar buttons.
+   * Disable to supply your own controls through `ksGridToolbarStart` / `ksGridToolbarEnd`
+   * and call `saveSettings()`, `clearSettings()`, `refreshData()`, or `addNewItem()` yourself.
+   */
+  @Input() showToolbarActions = true;
 
   // Uses Infinite Row Model (AG Grid Community) for server-driven sorting and filtering.
   @Input() useServerSideData = false;
@@ -114,7 +146,9 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   // Editing and deletion
   @Input() enableEditing = false;
   @Input() enableRowDeletion = false;
-  @Input() enableActionButtons = false; // Show edit/save/delete buttons in first column
+  @Input() enableActionButtons = false; // Show edit/save/delete buttons in an actions column
+  /** Places the actions column first (pinned left) or last (pinned right). */
+  @Input() actionsPosition: 'start' | 'end' = 'start';
 
   @Output() settingsSaved = new EventEmitter<KsAgGridState>();
   @Output() settingsCleared = new EventEmitter<void>();
@@ -134,20 +168,23 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   private cachedColumnDefsInput: ColDef<TData>[] | null | undefined;
   private cachedActionButtons?: boolean;
   private cachedRowDeletion?: boolean;
+  private cachedActionsPosition?: 'start' | 'end';
   private readonly emptyColumnDefs: ColDef<TData>[] = [];
 
-  private readonly lightTheme: Theme = themeQuartz.withParams({
+  // Colors come from the --ks-grid-* custom properties, so consumers can restyle the grid in CSS.
+  private readonly baseTheme: Theme = themeQuartz.withParams({
     accentColor: 'var(--ks-grid-accent)',
     backgroundColor: 'var(--ks-grid-surface)',
     foregroundColor: 'var(--ks-grid-text)',
     borderColor: 'var(--ks-grid-border)',
-    headerBackgroundColor: 'var(--ks-grid-subtle)',
+    headerBackgroundColor: 'var(--ks-grid-header)',
     headerTextColor: 'var(--ks-grid-muted)',
-    oddRowBackgroundColor: 'var(--ks-grid-surface)',
+    oddRowBackgroundColor: 'var(--ks-grid-odd-row)',
     rowHoverColor: 'var(--ks-grid-hover)',
     selectedRowBackgroundColor: 'var(--ks-grid-selected)',
+    rowBorder: { color: 'var(--ks-grid-row-border)' },
     fontFamily: 'inherit',
-    fontSize: 13,
+    fontSize: 14,
     headerFontSize: 12,
     headerFontWeight: 600,
     rowHeight: 48,
@@ -156,20 +193,44 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     wrapperBorder: false,
     wrapperBorderRadius: 0,
     cellHorizontalPadding: 16,
-    browserColorScheme: 'light',
-  });
-  private readonly darkTheme: Theme = this.lightTheme.withParams({
-    browserColorScheme: 'dark',
   });
 
+  private cachedTheme?: Theme;
+  private cachedThemeMode?: 'light' | 'dark';
+  private cachedThemeParams?: KsAgGridThemeParams | null;
+
   get theme(): Theme {
-    return this.themeMode === 'dark' ? this.darkTheme : this.lightTheme;
+    if (
+      this.cachedTheme &&
+      this.cachedThemeMode === this.themeMode &&
+      this.cachedThemeParams === this.themeParams
+    ) {
+      return this.cachedTheme;
+    }
+
+    this.cachedThemeMode = this.themeMode;
+    this.cachedThemeParams = this.themeParams;
+    this.cachedTheme = this.baseTheme.withParams({
+      browserColorScheme: this.themeMode,
+      ...(this.themeParams ?? {}),
+    });
+    return this.cachedTheme;
+  }
+
+  get shellClasses(): string {
+    const classes = ['grid-shell'];
+    if (this.themeMode === 'dark') classes.push('grid-shell--dark');
+    if (this.shellClass) classes.push(this.shellClass);
+    return classes.join(' ');
   }
   readonly modules: Module[] = [
     ClientSideRowModelModule, ClientSideRowModelApiModule, InfiniteRowModelModule,
     ColumnApiModule, RowApiModule, ScrollApiModule, RenderApiModule,
     TextEditorModule, NumberEditorModule, DateEditorModule, CheckboxEditorModule,
     CustomEditorModule,
+    // The grid always paginates and enables column filters, so it must not rely on consumers
+    // registering these modules globally.
+    PaginationModule, TextFilterModule, NumberFilterModule, DateFilterModule,
   ];
 
   get defaultColDef(): ColDef<TData> {
@@ -201,7 +262,8 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
       this.cachedEffectiveColumnDefs &&
       this.cachedColumnDefsInput === this.columnDefs &&
       this.cachedActionButtons === this.enableActionButtons &&
-      this.cachedRowDeletion === this.enableRowDeletion
+      this.cachedRowDeletion === this.enableRowDeletion &&
+      this.cachedActionsPosition === this.actionsPosition
     ) {
       return this.cachedEffectiveColumnDefs;
     }
@@ -209,6 +271,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.cachedColumnDefsInput = this.columnDefs;
     this.cachedActionButtons = this.enableActionButtons;
     this.cachedRowDeletion = this.enableRowDeletion;
+    this.cachedActionsPosition = this.actionsPosition;
 
     if (!this.columnDefs) {
       this.cachedEffectiveColumnDefs = this.emptyColumnDefs;
@@ -216,6 +279,15 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     }
 
     const columns: ColDef<TData>[] = [...this.columnDefs];
+    const atEnd = this.actionsPosition === 'end';
+    const pinned = atEnd ? 'right' : 'left';
+    const addActionColumn = (column: ColDef<TData>): void => {
+      if (atEnd) {
+        columns.push(column);
+      } else {
+        columns.unshift(column);
+      }
+    };
 
     // Add action buttons column (edit/save/delete)
     if (this.enableActionButtons) {
@@ -226,7 +298,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         minWidth: 104,
         maxWidth: 104,
         flex: 0,
-        pinned: 'left',
+        pinned,
         sortable: false,
         filter: false,
         editable: false,
@@ -237,7 +309,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         onCellClicked: (params) => this.onActionClicked(params),
         suppressKeyboardEvent: ({ event }) => this.suppressActionKeyboardEvent(event),
       };
-      columns.unshift(actionsColumn);
+      addActionColumn(actionsColumn);
     }
     // Fallback to simple delete button column
     else if (this.enableRowDeletion) {
@@ -248,7 +320,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         minWidth: 72,
         maxWidth: 72,
         flex: 0,
-        pinned: 'left',
+        pinned,
         sortable: false,
         filter: false,
         editable: false,
@@ -259,7 +331,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         onCellClicked: (params) => this.onActionClicked(params),
         suppressKeyboardEvent: ({ event }) => this.suppressActionKeyboardEvent(event),
       };
-      columns.unshift(deleteColumn);
+      addActionColumn(deleteColumn);
     }
 
     this.cachedEffectiveColumnDefs = columns;

@@ -1,41 +1,41 @@
-<div class="grid-shell" [class.grid-shell--dark]="themeMode === 'dark'">
-  @if (enableSettingsPersistence) {
-    <div class="grid-toolbar">
-      <div class="grid-toolbar-settings" role="group" aria-label="Grid settings">
-        <button type="button" class="grid-toolbar-button" (click)="saveSettings()">
-          <lib-ks-icon name="save" />
-          Save Settings
-        </button>
-        <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="clearSettings()">
-          <lib-ks-icon name="refresh" />
-          Clear Settings
-        </button>
-      </div>
-      <div class="grid-toolbar-actions" role="group" aria-label="Grid actions">
-        <button type="button" class="grid-toolbar-button" (click)="refreshData()">
-          <lib-ks-icon name="refresh" />
-          Refresh
-      </button>
-        <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
-          <lib-ks-icon name="add" />
-          Add New Item
-        </button>
+<div [class]="shellClasses" [style]="shellStyle">
+  <div class="grid-toolbar">
+    <div class="grid-toolbar-start">
+      @if (gridTitle) {
+        <h2 class="grid-toolbar-title">{{ gridTitle }}</h2>
+      }
+      <ng-content select="[ksGridToolbarStart]" />
     </div>
-</div>
-  } @else {
-    <div class="grid-toolbar">
-      <div class="grid-toolbar-actions" role="group" aria-label="Grid actions">
-        <button type="button" class="grid-toolbar-button" (click)="refreshData()">
-          <lib-ks-icon name="refresh" />
-          Refresh
-        </button>
-        <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
-          <lib-ks-icon name="add" />
-          Add New Item
-        </button>
+
+    <div class="grid-toolbar-end">
+      @if (enableSettingsPersistence && showToolbarActions) {
+        <div class="grid-toolbar-group" role="group" aria-label="Grid settings">
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="saveSettings()">
+            <lib-ks-icon name="save" />
+            Save Settings
+          </button>
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--quiet" (click)="clearSettings()">
+            <lib-ks-icon name="settings_backup_restore" />
+            Clear Settings
+          </button>
+        </div>
+        <span class="grid-toolbar-divider" aria-hidden="true"></span>
+      }
+      <div class="grid-toolbar-group" role="group" aria-label="Grid actions">
+        <ng-content select="[ksGridToolbarEnd]" />
+        @if (showToolbarActions) {
+          <button type="button" class="grid-toolbar-button" (click)="refreshData()">
+            <lib-ks-icon name="refresh" />
+            Refresh
+          </button>
+          <button type="button" class="grid-toolbar-button grid-toolbar-button--primary" (click)="addNewItem()">
+            <lib-ks-icon name="add" />
+            Add New Item
+          </button>
+        }
       </div>
     </div>
-  }
+  </div>
 
   <ag-grid-angular
     [class]="gridClass"
@@ -68,4 +68,3 @@
     (cellValueChanged)="onCellValueChanged($event)">
   </ag-grid-angular>
 </div>
-
