@@ -839,6 +839,127 @@ describe('KsAgGridComponent', () => {
     await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
   });
 
+  it('keeps a saved new row when client data is refreshed', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const names = () => Array.from(host.querySelectorAll<HTMLElement>('.ag-center-cols-container .ag-row'))
+      .map((row) => ({
+        index: Number(row.getAttribute('row-index')),
+        name: row.querySelector<HTMLElement>('[col-id="name"]')?.textContent?.trim(),
+      }))
+      .sort((a, b) => a.index - b.index)
+      .map((row) => row.name);
+    await vi.waitFor(() => expect(names()).toEqual(['Ada']));
+
+    const includedOnSave: boolean[] = [];
+    component.rowSaved.subscribe((row) => includedOnSave.push(rows.includes(row)));
+    component.addNewItem();
+    await vi.waitFor(() => expect(host.querySelector('[col-id="name"] input')).not.toBeNull());
+    const input = host.querySelector<HTMLInputElement>('.ag-row[row-index="0"] [col-id="name"] input')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    host.querySelector<HTMLButtonElement>('.ag-row[row-index="0"] [data-action="save"]')!.click();
+
+    await vi.waitFor(() => expect(names()).toEqual(['Grace', 'Ada']));
+    expect(rows.map((row) => row.name)).toEqual(['Grace', 'Ada']);
+    expect(includedOnSave).toEqual([true]);
+
+    component.refreshData();
+
+    await vi.waitFor(() => expect(names()).toEqual(['Grace', 'Ada']));
+    expect(rows).toHaveLength(2);
+  });
+
+  it('keeps every saved new row, newest first, across refresh', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const names = () => Array.from(host.querySelectorAll<HTMLElement>('.ag-center-cols-container .ag-row'))
+      .map((row) => ({
+        index: Number(row.getAttribute('row-index')),
+        name: row.querySelector<HTMLElement>('[col-id="name"]')?.textContent?.trim(),
+      }))
+      .sort((a, b) => a.index - b.index)
+      .map((row) => row.name);
+    await vi.waitFor(() => expect(names()).toEqual(['Ada']));
+
+    const saveNew = async (name: string): Promise<void> => {
+      component.addNewItem();
+      await vi.waitFor(() => expect(host.querySelector('.ag-row[row-index="0"] [col-id="name"] input')).not.toBeNull());
+      const input = host.querySelector<HTMLInputElement>('.ag-row[row-index="0"] [col-id="name"] input')!;
+      input.value = name;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      host.querySelector<HTMLButtonElement>('.ag-row[row-index="0"] [data-action="save"]')!.click();
+      await vi.waitFor(() => expect(host.querySelector('.ag-row[row-index="0"] [data-action="edit"]')).not.toBeNull());
+    };
+
+    await saveNew('Grace');
+    await saveNew('Lin');
+
+    expect(rows.map((row) => row.name)).toEqual(['Lin', 'Grace', 'Ada']);
+    component.refreshData();
+    await vi.waitFor(() => expect(names()).toEqual(['Lin', 'Grace', 'Ada']));
+  });
+
+  it('drops an unsaved new row when client data is refreshed', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const names = () => Array.from(host.querySelectorAll<HTMLElement>('.ag-center-cols-container .ag-row'))
+      .map((row) => ({
+        index: Number(row.getAttribute('row-index')),
+        name: row.querySelector<HTMLElement>('[col-id="name"]')?.textContent?.trim(),
+      }))
+      .sort((a, b) => a.index - b.index)
+      .map((row) => row.name);
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+    const saved = vi.fn();
+    component.rowSaved.subscribe(saved);
+
+    component.addNewItem();
+    await vi.waitFor(() => expect(host.querySelector('[col-id="name"] input')).not.toBeNull());
+    const input = host.querySelector<HTMLInputElement>('.ag-row[row-index="0"] [col-id="name"] input')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    component.refreshData();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(rows).toEqual([{ id: 1, name: 'Ada' }]);
+    await vi.waitFor(() => expect(names()).toEqual(['Ada']));
+  });
+
+  it('does not insert an existing row again when it is saved', async () => {
+    const rows: GridRow[] = [{ id: 1, name: 'Ada' }];
+    fixture.componentRef.setInput('rowData', rows);
+    fixture.componentRef.setInput('columnDefs', [{ field: 'name' }]);
+    fixture.componentRef.setInput('enableActionButtons', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+
+    host.querySelector<HTMLButtonElement>('[data-action="edit"]')!.click();
+    await vi.waitFor(() => expect(host.querySelector('[col-id="name"] input')).not.toBeNull());
+    const input = host.querySelector<HTMLInputElement>('[col-id="name"] input')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    host.querySelector<HTMLButtonElement>('[data-action="save"]')!.click();
+
+    await vi.waitFor(() => expect(host.querySelector('[data-action="edit"]')).not.toBeNull());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: 1, name: 'Grace' });
+  });
+
   it('keeps column definition identity stable across change detection', () => {
     component.columnDefs = [{ field: 'name' }];
     component.enableActionButtons = true;
