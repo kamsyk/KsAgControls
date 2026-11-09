@@ -161,6 +161,11 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
   private editingRows = new Set<TData>();
   /** Values captured when a row enters edit mode, so Cancel can discard edits. */
   private editSnapshots = new Map<TData, Record<string, unknown>>();
+  /**
+   * Rows created by Add New Item. They live only in the grid model until saved;
+   * refresh reapplies `rowData` and would otherwise discard them.
+   */
+  private pendingClientRows = new Set<TData>();
 
   private cachedDefaultColDef?: ColDef<TData>;
   private cachedDefaultColDefKey?: string;
@@ -604,6 +609,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     const result = this.agGrid.api.applyTransaction({ add: [newItem], addIndex: 0 });
 
     if (result && result.add && result.add.length > 0) {
+      this.pendingClientRows.add(newItem);
       // Enter edit mode for the new row
       this.enterEditMode(newItem);
 
@@ -660,6 +666,9 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     this.editSnapshots.delete(data);
     this.editingRows.delete(data);
     this.agGrid?.api?.stopEditing(false);
+    // Commit before emitting so a rowSaved handler that inserts only missing
+    // rows does not add a second copy of this object.
+    this.commitPendingClientRow(data);
     this.rowSaved.emit(data);
     this.refreshGrid();
   }
@@ -870,6 +879,7 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     // Remove from editing set if present
     this.editingRows.delete(data);
     this.editSnapshots.delete(data);
+    this.pendingClientRows.delete(data);
 
     // Emit the deletion event to parent before touching grid state.
     // Handlers often remove the row from the bound array synchronously, so the
@@ -881,6 +891,26 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
     // whenever the row is missing from rowData or the array was already updated.
     if (!this.useServerSideData) {
       this.agGrid.api.applyTransaction({ remove: [data] });
+    }
+  }
+
+  /**
+   * Add New Item inserts through a transaction, not the bound array. Once the
+   * user saves, put that same object into `rowData` (already at index 0 in the
+   * grid) so refresh, which reloads the array, keeps the row.
+   */
+  private commitPendingClientRow(data: TData): void {
+    if (this.useServerSideData || !this.pendingClientRows.delete(data)) {
+      return;
+    }
+
+    if (!this.rowData) {
+      this.rowData = [data];
+      return;
+    }
+
+    if (!this.rowData.includes(data)) {
+      this.rowData.unshift(data);
     }
   }
 
@@ -946,6 +976,9 @@ export class KsAgGridComponent<TData = unknown> implements OnInit, OnChanges {
         for (const data of [...this.editingRows]) {
           this.cancelEdit(data);
         }
+        // Unsaved Add New Item rows were never written to rowData. Forget them
+        // so a later save cannot resurrect a row this refresh is discarding.
+        this.pendingClientRows.clear();
         this.agGrid.api.setGridOption('rowData', this.rowData);
       }
     }
