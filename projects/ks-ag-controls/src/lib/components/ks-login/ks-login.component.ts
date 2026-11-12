@@ -1,15 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
-import { MatLabel, MatFormField } from '@angular/material/input';
-import { ReactiveFormsModule } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { FormBuilder, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatLabel, MatFormField, MatInputModule } from '@angular/material/input';
 import { NgClass, NgStyle } from '@angular/common';
 import { AuthService, LoginRequest } from '../../services/auth.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { GoogleAuthService } from '../../services/google-auth.service';
-import { KsButtonComponent } from "../../controls/ks-button/ks-button.component";
+import { KsButtonComponent } from '../../controls/ks-button/ks-button.component';
 import { KsSignUpComponent } from '../ks-sign-up/ks-sign-up.component';
 import { KS_LOGIN_TRANSLATIONS, KsLoginError, KsLoginLanguage } from './ks-login.translations';
 import { KsAuthProvider } from '../ks-auth-provider';
@@ -42,6 +50,7 @@ export class KsLoginComponent {
   private destroyRef = inject(DestroyRef);
   private dialog = inject(MatDialog);
   private googleAuth = inject(GoogleAuthService);
+  private readonly loginForm = viewChild<FormGroupDirective>('loginForm');
 
   loginUrl = input.required<string>();
   redirectUrl = input.required<string>();
@@ -103,35 +112,64 @@ export class KsLoginComponent {
   }
 
   signInWithGoogle() {
-    if (this.loading) return;
-    this.errorKey.set(null);
-    try {
-      this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl());
-    } catch (error) {
-      console.error('Could not start Google authentication:', error);
-      this.errorKey.set('googleAuthError');
-    }
+    this.startProviderSignIn(() =>
+      this.googleAuth.start(this.googleAuthUrl(), this.googleReturnUrl()),
+      'googleAuthError',
+      'Could not start Google authentication:',
+    );
   }
 
   signInWithFacebook() {
-    if (this.loading) return;
-    this.errorKey.set(null);
-    try {
-      this.googleAuth.startProvider(this.facebookAuthUrl(), this.facebookReturnUrl(), 'Facebook');
-    } catch (error) {
-      console.error('Could not start Facebook authentication:', error);
-      this.errorKey.set('facebookAuthError');
-    }
+    this.startProviderSignIn(
+      () =>
+        this.googleAuth.startProvider(
+          this.facebookAuthUrl(),
+          this.facebookReturnUrl(),
+          'Facebook',
+        ),
+      'facebookAuthError',
+      'Could not start Facebook authentication:',
+    );
   }
 
   signInWithMicrosoft() {
+    this.startProviderSignIn(
+      () =>
+        this.googleAuth.startProvider(
+          this.microsoftAuthUrl(),
+          this.microsoftReturnUrl(),
+          'Microsoft',
+        ),
+      'microsoftAuthError',
+      'Could not start Microsoft authentication:',
+    );
+  }
+
+  /** Provider login does not use username/password, so clear their validation UI. */
+  private clearCredentialValidation(): void {
+    const current = this.form.getRawValue();
+    this.loginForm()?.resetForm(current);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    for (const control of Object.values(this.form.controls)) {
+      control.markAsPristine();
+      control.markAsUntouched();
+    }
+  }
+
+  private startProviderSignIn(
+    start: () => void,
+    errorKey: KsLoginError,
+    errorMessage: string,
+  ): void {
     if (this.loading) return;
+    this.clearCredentialValidation();
     this.errorKey.set(null);
     try {
-      this.googleAuth.startProvider(this.microsoftAuthUrl(), this.microsoftReturnUrl(), 'Microsoft');
+      start();
     } catch (error) {
-      console.error('Could not start Microsoft authentication:', error);
-      this.errorKey.set('microsoftAuthError');
+      console.error(errorMessage, error);
+      this.errorKey.set(errorKey);
     }
   }
 

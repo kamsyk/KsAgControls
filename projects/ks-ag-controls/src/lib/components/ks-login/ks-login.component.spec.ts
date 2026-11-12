@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormGroupDirective } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -99,6 +101,39 @@ describe('KsLoginComponent', () => {
       } finally {
         log.mockRestore();
       }
+    });
+
+    it(`does not apply username/password validation when signing in with ${provider}`, () => {
+      fixture.componentRef.setInput(`${provider}AuthUrl`, `/api/auth/${provider}`);
+      fixture.componentRef.setInput(`${provider}ReturnUrl`, '/advisor');
+      fixture.detectChanges();
+
+      component.form.markAllAsTouched();
+      component.form.markAsDirty();
+      const formDirective = fixture.debugElement
+        .query(By.css('form.login-form'))
+        .injector.get(FormGroupDirective);
+      formDirective.onSubmit(new Event('submit'));
+      expect(component.form.touched).toBe(true);
+      expect(formDirective.submitted).toBe(true);
+      expect(component.form.get('username')?.touched).toBe(true);
+      expect(component.form.get('password')?.touched).toBe(true);
+
+      const name = { google: 'Google', facebook: 'Facebook', microsoft: 'Microsoft' }[provider];
+      const button = Array.from(
+        fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+      ).find(element => element.textContent?.includes(name));
+      button!.click();
+      fixture.detectChanges();
+
+      expect(formDirective.submitted).toBe(false);
+      expect(component.form.touched).toBe(false);
+      expect(component.form.dirty).toBe(false);
+      expect(component.form.get('username')?.touched).toBe(false);
+      expect(component.form.get('password')?.touched).toBe(false);
+      expect(component.form.get('username')?.dirty).toBe(false);
+      expect(component.form.get('password')?.dirty).toBe(false);
+      expect(login).not.toHaveBeenCalled();
     });
   }
 

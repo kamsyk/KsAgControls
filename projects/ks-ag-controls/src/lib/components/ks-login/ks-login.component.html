@@ -5,7 +5,7 @@
   [ngStyle]="styles()"
 >
   <h2 class="login-title">{{ translations().signIn }}</h2>
-  <form class="login-form" (ngSubmit)="submit()" [formGroup]="form">
+  <form #loginForm="ngForm" class="login-form" (ngSubmit)="submit()" [formGroup]="form">
     <mat-form-field appearance="outline">
       <mat-label>{{ translations().username }}</mat-label>
       <input matInput formControlName="username" autocomplete="username" />
